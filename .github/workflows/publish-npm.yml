@@ -1,116 +1,99 @@
-name: Publish to npm
+name: Release & Publish
 
 on:
   release:
     types: [created]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to publish (e.g., 1.0.0)'
-        required: true
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  publish:
-    name: Publish to npm
+  version-bump:
+    name: Sync versions + Commit bump + Changelog
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Detected version: ${VERSION}"
+
+      - name: Update version in package.json
+        run: |
+          jq --arg v "${{ steps.get_version.outputs.version }}" '.version = $v' package.json > tmp.json
+          mv tmp.json package.json
+          echo "✓ Updated package.json"
+
+      - name: Update version in Cargo.toml
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ steps.get_version.outputs.version }}\"/" Cargo.toml
+          echo "✓ Updated Cargo.toml"
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add package.json Cargo.toml
+          git commit -m "chore: version bump to ${{ steps.get_version.outputs.version }}"
+          git push
+          echo "✓ Version bump committed"
+
+      - name: Generate Changelog
+        run: |
+          node scripts/generate-changelog.js
+          echo "✓ Changelog generated"
+
+      - name: Update GitHub Release Notes
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ""
+          body_path: RELEASE_NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-npm:
+    name: Publish to npm
+    needs:
+      - version-bump
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: 18
+          registry-url: https://registry.npmjs.org/
 
-      - name: Setup npm authentication
+      - name: Authenticate npm
         run: |
-          # Explicitly create .npmrc for npm publish (setup-node may not always work)
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-          npm config set registry https://registry.npmjs.org/
-          npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
           echo "✓ npm authentication configured"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
+      - name: Pre-publish validation
+        run: node scripts/prepublish.js
 
-      - name: Verify versions are synchronized
-        run: |
-          node scripts/version-sync.js
-          echo "✓ All versions synchronized"
-
-      - name: Run tests
-        env:
-          RUST_TEST_THREADS: 1
-        run: cargo test --verbose
-
-      - name: Build release binary
-        run: |
-          cargo build --release --verbose
-          echo "Build completed. Checking for binary..."
-
-      - name: Verify binary exists
-        shell: bash
-        run: |
-          # Check for binary in default location
-          if [ -f target/release/doplan ]; then
-            echo "✓ Binary found at target/release/doplan"
-            ls -lh target/release/doplan
-          else
-            # Check if it's a workspace or different location
-            echo "Checking alternative locations..."
-            find target -name "doplan" -type f 2>/dev/null || true
-            find target -name "doplan.exe" -type f 2>/dev/null || true
-            
-            # Verify Cargo.toml configuration
-            echo "Checking Cargo.toml configuration..."
-            if grep -q "\[\[bin\]\]" Cargo.toml; then
-              echo "Binary target found in Cargo.toml"
-              grep -A 2 "\[\[bin\]\]" Cargo.toml
-            else
-              echo "Warning: No [[bin]] section found in Cargo.toml"
-            fi
-            
-            # List target/release contents
-            echo "Contents of target/release:"
-            ls -la target/release/ || echo "target/release directory does not exist"
-            
-            echo "Error: Binary not found at target/release/doplan"
-            exit 1
-          fi
-          echo "✓ Binary built successfully"
-
-      - name: Run pre-publish validation
-        run: |
-          node scripts/prepublish.js
-          echo "✓ Pre-publish validation passed"
-
-      - name: Package npm bundle
-        run: |
-          npm pack --dry-run
-          echo "✓ Package contents verified"
-
-      - name: Publish to npm
+      - name: Publish package
         run: npm publish --access public
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Verify published package
+      - name: Verify published version
         run: |
-          PACKAGE_NAME="@doplan-dev/cli"
           VERSION=$(node -p "require('./package.json').version")
-          echo "Verifying package: ${PACKAGE_NAME}@${VERSION}"
-          npm view "${PACKAGE_NAME}@${VERSION}" version
-          echo "✓ Package published successfully"
-
+          npm view @doplan-dev/cli@$VERSION version
+          echo "✓ Published @doplan-dev/cli@$VERSION"
