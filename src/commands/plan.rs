@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use colored::*;
-use std::path::PathBuf;
 use crate::state::ProjectState;
 use crate::utils;
 use serde_json::json;
@@ -14,10 +13,16 @@ pub async fn execute(_args: Vec<String>) -> Result<()> {
 
     // Load state
     let state = ProjectState::load()
-        .context("Failed to load project state")?;
+        .context("Failed to load project state. Ensure .doplan/state.json exists")?;
+
+    // Validate state
+    if state.project_name.is_none() {
+        anyhow::bail!("Project state is incomplete: missing project_name. Run /discuss first.");
+    }
 
     // Check if PRD exists
-    let doplan_dir = utils::doplan_dir()?;
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
     let prd_path = doplan_dir.join("PRD.md");
     
     if !prd_path.exists() {
@@ -27,7 +32,11 @@ pub async fn execute(_args: Vec<String>) -> Result<()> {
 
     // Read PRD
     let prd_content = std::fs::read_to_string(&prd_path)
-        .context("Failed to read PRD")?;
+        .with_context(|| format!("Failed to read PRD from: {}", prd_path.display()))?;
+    
+    // Validate PRD content
+    utils::validate_content(&prd_content, 50)
+        .context("PRD content is too short or invalid")?;
 
     // Check if phases exist in state
     if state.phases.is_none() || state.phases.as_ref().unwrap().is_empty() {
@@ -40,7 +49,8 @@ pub async fn execute(_args: Vec<String>) -> Result<()> {
 
     // Create plan directory structure
     let plan_dir = doplan_dir.join("plan");
-    utils::ensure_dir(&plan_dir)?;
+    utils::ensure_dir(&plan_dir)
+        .context("Failed to create plan directory")?;
 
     println!("{}", "Creating phase and feature structure...".bright_yellow());
     println!();
@@ -49,7 +59,8 @@ pub async fn execute(_args: Vec<String>) -> Result<()> {
     for (phase_idx, phase) in phases.iter().enumerate() {
         let phase_num = format!("{:02}-{}", phase_idx + 1, sanitize_name(&phase.name));
         let phase_dir = plan_dir.join(&phase_num);
-        utils::ensure_dir(&phase_dir)?;
+        utils::ensure_dir(&phase_dir)
+            .with_context(|| format!("Failed to create phase directory: {}", phase_num))?;
 
         println!("  {} Creating phase: {}", "→".bright_cyan(), phase.name);
         
@@ -68,7 +79,8 @@ pub async fn execute(_args: Vec<String>) -> Result<()> {
                 if let Some(feature) = features_list.iter().find(|f| f.name == *feature_name) {
                     let feature_num = format!("{:02}-{}", feature_idx + 1, sanitize_name(feature_name));
                     let feature_dir = phase_dir.join(&feature_num);
-                    utils::ensure_dir(&feature_dir)?;
+                    utils::ensure_dir(&feature_dir)
+                        .with_context(|| format!("Failed to create feature directory: {}", feature_num))?;
 
                     println!("    {} Creating feature: {}", "→".bright_cyan(), feature_name);
 
@@ -181,8 +193,16 @@ fn generate_phase_plan(
     content.push_str("- All tests passing\n");
     content.push_str("- Documentation complete\n\n");
 
-    std::fs::write(&plan_path, content)
-        .context("Failed to write phase plan")?;
+    // Validate content before writing
+    utils::validate_content(&content, 100)
+        .context("Generated phase plan content is too short")?;
+
+    std::fs::write(&plan_path, &content)
+        .with_context(|| format!("Failed to write phase plan to: {}", plan_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&plan_path, 100)
+        .context("Phase plan file verification failed")?;
 
     Ok(plan_path)
 }
@@ -204,10 +224,18 @@ fn generate_phase_progress(phase_dir: &PathBuf, phase: &crate::state::Phase) -> 
     });
 
     let content = serde_json::to_string_pretty(&progress)
-        .context("Failed to serialize phase progress")?;
+        .context("Failed to serialize phase progress to JSON")?;
 
-    std::fs::write(&progress_path, content)
-        .context("Failed to write phase progress")?;
+    // Validate JSON content
+    utils::validate_content(&content, 50)
+        .context("Generated phase progress content is too short")?;
+
+    std::fs::write(&progress_path, &content)
+        .with_context(|| format!("Failed to write phase progress to: {}", progress_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&progress_path, 50)
+        .context("Phase progress file verification failed")?;
 
     Ok(progress_path)
 }
@@ -276,8 +304,16 @@ fn generate_feature_plan(
     content.push_str("## Timeline\n\n");
     content.push_str("_Timeline to be defined_\n\n");
 
-    std::fs::write(&plan_path, content)
-        .context("Failed to write feature plan")?;
+    // Validate content before writing
+    utils::validate_content(&content, 100)
+        .context("Generated feature plan content is too short")?;
+
+    std::fs::write(&plan_path, &content)
+        .with_context(|| format!("Failed to write feature plan to: {}", plan_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&plan_path, 100)
+        .context("Feature plan file verification failed")?;
 
     Ok(plan_path)
 }
@@ -319,8 +355,16 @@ fn generate_feature_design(
     content.push_str("## Accessibility\n\n");
     content.push_str("_Accessibility requirements_\n\n");
 
-    std::fs::write(&design_path, content)
-        .context("Failed to write feature design")?;
+    // Validate content before writing
+    utils::validate_content(&content, 100)
+        .context("Generated feature design content is too short")?;
+
+    std::fs::write(&design_path, &content)
+        .with_context(|| format!("Failed to write feature design to: {}", design_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&design_path, 100)
+        .context("Feature design file verification failed")?;
 
     Ok(design_path)
 }
@@ -383,8 +427,16 @@ fn generate_feature_tasks(
     content.push_str("## Blockers\n\n");
     content.push_str("_No blockers_\n\n");
 
-    std::fs::write(&tasks_path, content)
-        .context("Failed to write feature tasks")?;
+    // Validate content before writing
+    utils::validate_content(&content, 100)
+        .context("Generated feature tasks content is too short")?;
+
+    std::fs::write(&tasks_path, &content)
+        .with_context(|| format!("Failed to write feature tasks to: {}", tasks_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&tasks_path, 100)
+        .context("Feature tasks file verification failed")?;
 
     Ok(tasks_path)
 }
@@ -411,10 +463,18 @@ fn generate_feature_progress(
     });
 
     let content = serde_json::to_string_pretty(&progress)
-        .context("Failed to serialize feature progress")?;
+        .context("Failed to serialize feature progress to JSON")?;
 
-    std::fs::write(&progress_path, content)
-        .context("Failed to write feature progress")?;
+    // Validate JSON content
+    utils::validate_content(&content, 50)
+        .context("Generated feature progress content is too short")?;
+
+    std::fs::write(&progress_path, &content)
+        .with_context(|| format!("Failed to write feature progress to: {}", progress_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&progress_path, 50)
+        .context("Feature progress file verification failed")?;
 
     Ok(progress_path)
 }
