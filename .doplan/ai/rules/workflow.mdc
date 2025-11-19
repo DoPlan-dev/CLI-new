@@ -1,0 +1,170 @@
+# DoPlan Workflow Rules
+
+These rules define the **perfect workflow sequence** that all AI agents MUST follow.
+
+## ⚠️ CRITICAL: Perfect Workflow Sequence
+
+The DoPlan workflow follows this **exact sequence**. **DO NOT skip steps or work out of order:**
+
+1. **Plan** → @planner creates project structure
+2. **Design** → @designer creates design specifications
+3. **Code** → @coder implements features
+4. **Test** → @tester runs tests and captures screenshots
+5. **Review** → @reviewer reviews code quality
+6. **Deploy** → @devops handles deployment
+
+## Core Principles
+
+- Follow Spec-Kit and BMAD-METHOD methodologies
+- Generate contracts before implementation
+- Track progress in dashboard
+- Use feature branches for each feature
+- All commands are available as slash commands in your IDE/CLI
+- **Agents MUST wait for previous agents to complete**
+- **Agents MUST tag the next agent when work is complete**
+
+## Workflow Stages
+
+### 1. Plan → @planner (FIRST STEP)
+
+**Agent:** @planner  
+**When:** Project start or new feature  
+**Commands:** /Discuss, /Refine, /Generate, /Plan
+
+**Process:**
+1. **Idea Discussion (/Discuss)**
+- Ask comprehensive questions about the idea
+- Suggest improvements and enhancements
+- Help organize features into phases
+- Recommend tech stack based on requirements
+- Save results to state file and `doplan/idea-notes.md`
+
+2. **Idea Refinement (/Refine)**
+- Review existing idea notes
+- Suggest additional features
+- Identify gaps in the plan
+- Enhance technical specifications
+- Update idea documentation
+
+3. **Document Generation (/Generate)**
+- Create `doplan/PRD.md` - Product Requirements Document
+- Create `doplan/structure.md` - Project structure
+- Create `doplan/contracts/api-spec.json` - API specification
+- Create `doplan/contracts/data-model.md` - Data models
+- Use templates from `doplan/templates/`
+
+4. **Planning (/Plan)**
+   - **CRITICAL:** Create phase directories using numbered and slugified names: `doplan/01-{phase-name}/`
+   - **CRITICAL:** Create feature directories: `doplan/01-{phase-name}/01-{feature-name}/`
+   - Generate `plan.md`, `design.md` (placeholder), `tasks.md` for each feature
+- Create `phase-plan.md` and `phase-progress.json` for each phase
+- Update dashboard with new structure
+   - **Tag @designer** to begin design work
+
+### 2. Design → @designer
+
+**Agent:** @designer  
+**When:** After @planner completes planning  
+**Commands:** /Design, /Design:Review
+
+**Process:**
+1. Read `plan.md` and PRD
+2. Read `doplan/design/DPR.md` - Design Preferences & Requirements
+3. Read `.doplan/ai/rules/design_rules.mdc` - Design rules
+4. Create comprehensive `design.md` following design system
+5. Use design tokens from `doplan/design/design-tokens.json`
+6. **Tag @coder** to begin implementation
+
+### 3. Code → @coder
+
+**Agent:** @coder  
+**When:** After @planner AND @designer complete  
+**Commands:** /Implement
+
+**Process:**
+1. Verify @planner and @designer have completed
+2. Read `plan.md`, `design.md`, `tasks.md`
+3. Automatically create GitHub branch: `feature/{##}-{phase-name}-{##}-{feature-name}`
+4. Implement features following plan and design
+5. Follow `.doplan/ai/rules/design_rules.mdc` for UI work
+6. Update progress as tasks complete
+7. **Tag @tester** when work is ready for testing
+
+### 4. Test → @tester
+
+**Agent:** @tester  
+**When:** Tagged by @coder  
+**Commands:** /Test, /Test:Visual
+
+**Process:**
+1. Read `plan.md` and `design.md`
+2. Generate test scenarios from acceptance criteria
+3. Write and execute automated tests using Playwright (MCP)
+4. **CRITICAL:** Capture screenshots to `.doplan/artifacts/screenshots/{phase-name}/{feature-name}.png`
+5. Perform visual regression checks
+6. Report bugs with screenshots if found
+7. **Tag @reviewer** with test report (pass or fail)
+
+### 5. Review → @reviewer
+
+**Agent:** @reviewer  
+**When:** AFTER @tester has successfully run all tests  
+**Commands:** /Review
+
+**Process:**
+1. Verify @tester has run all tests and they pass
+2. Review implementation against `plan.md` and `design.md`
+3. Check code quality and standards
+4. Verify design system compliance
+5. **If approved:** Tag @devops for deployment
+6. **If changes needed:** Tag @coder with feedback
+
+### 6. Deploy → @devops
+
+**Agent:** @devops  
+**When:** AFTER @reviewer has approved  
+**Commands:** /Deploy, /Deploy:Configure
+
+**Process:**
+1. Verify @reviewer has approved
+2. Check `doplan/RAKD.md` for required API keys
+3. Configure deployment pipelines
+4. Deploy to staging, then production
+5. Monitor deployment status
+6. Report deployment status to team
+
+## State Management
+
+- State lives in IDE-specific config directory (e.g., `.cursor/config/doplan-state.json`)
+- Progress tracked in `doplan/**/progress.json` files
+- Dashboard in `doplan/dashboard.md` and `.doplan/dashboard.json`
+- Always update state after command execution
+
+## Agent Handoff Protocol
+
+**When your work is complete:**
+1. Update progress files
+2. Update state file
+3. **Tag the next agent** as defined in communication.mdc
+4. Provide context about what was completed
+
+**Example:**
+- @planner: "✅ Planning complete. Created 3 phases with 8 features. @designer please create design specifications."
+- @designer: "✅ Design complete. @coder please begin implementation."
+- @coder: "✅ Implementation complete. @tester please run tests."
+- @tester: "✅ All tests passed. Screenshot saved. @reviewer please review."
+- @reviewer: "✅ Code review passed. @devops please deploy."
+- @devops: "✅ Deployment successful."
+
+## Best Practices
+
+- Always start with /Discuss before /Plan
+- Generate PRD before creating phases
+- Follow the phase → feature hierarchy
+- Use numbered and slugified folder names
+- Update tasks.md as you work
+- Run /Progress regularly
+- Use /Next to get recommendations
+- **Wait for previous agents to complete**
+- **Tag next agent when work is done**
+- **Follow the workflow sequence strictly**

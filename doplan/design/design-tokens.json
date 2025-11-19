@@ -1,0 +1,56 @@
+{
+  "breakpoints": {
+    "desktop": "1024px",
+    "mobile": "320px",
+    "tablet": "768px"
+  },
+  "colors": {
+    "accent": {
+      "dark": "#c00eb3",
+      "light": "#fa4aed",
+      "main": "#f81ce5"
+    },
+    "neutral": {
+      "background": "#ffffff",
+      "surface": "#fafafa",
+      "text": "#000000",
+      "textSecondary": "#666666"
+    },
+    "primary": {
+      "dark": "#0051cc",
+      "light": "#3291ff",
+      "main": "#0070f3"
+    },
+    "secondary": {
+      "dark": "#5a1f96",
+      "light": "#9a4ed4",
+      "main": "#7928ca"
+    }
+  },
+  "spacing": {
+    "base": "8px",
+    "large": "24px",
+    "medium": "16px",
+    "small": "8px",
+    "xlarge": "32px"
+  },
+  "typography": {
+    "fontFamilies": {
+      "body": "system-ui, -apple-system, sans-serif",
+      "heading": "system-ui, -apple-system, sans-serif",
+      "monospace": "'Courier New', monospace"
+    },
+    "fontSizes": {
+      "body": "1rem",
+      "h1": "2.5rem",
+      "h2": "2rem",
+      "h3": "1.5rem",
+      "small": "0.875rem"
+    },
+    "fontWeights": {
+      "bold": 700,
+      "medium": 500,
+      "normal": 400
+    }
+  }
+}
