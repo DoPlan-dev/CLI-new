@@ -1,38 +1,18 @@
 {
-  "overall_progress": 50.0,
+  "overall_progress": 66.66666666666667,
   "phases": [
-    {
-      "features": [
-        {
-          "name": "dashboard",
-          "priority": "low",
-          "progress": 0.0,
-          "status": "not_started",
-          "tasks": {
-            "blocked": 0,
-            "completed": 0,
-            "in_progress": 0,
-            "not_started": 3,
-            "total": 3
-          }
-        }
-      ],
-      "name": "enhancement",
-      "progress": 0.0,
-      "status": "not_started"
-    },
     {
       "features": [
         {
           "name": "feature tracking",
           "priority": "medium",
-          "progress": 0.0,
-          "status": "not_started",
+          "progress": 100.0,
+          "status": "completed",
           "tasks": {
             "blocked": 0,
-            "completed": 0,
+            "completed": 3,
             "in_progress": 0,
-            "not_started": 3,
+            "not_started": 0,
             "total": 3
           }
         },
@@ -51,8 +31,8 @@
         }
       ],
       "name": "core features",
-      "progress": 50.0,
-      "status": "in_progress"
+      "progress": 100.0,
+      "status": "completed"
     },
     {
       "features": [
@@ -86,8 +66,28 @@
       "name": "foundation",
       "progress": 100.0,
       "status": "completed"
+    },
+    {
+      "features": [
+        {
+          "name": "dashboard",
+          "priority": "low",
+          "progress": 0.0,
+          "status": "not_started",
+          "tasks": {
+            "blocked": 0,
+            "completed": 0,
+            "in_progress": 0,
+            "not_started": 3,
+            "total": 3
+          }
+        }
+      ],
+      "name": "enhancement",
+      "progress": 0.0,
+      "status": "not_started"
     }
   ],
   "project_name": "DoPlan CLI",
-  "updated_at": "2025-11-19T01:06:10.059217+00:00"
+  "updated_at": "2025-11-19T01:13:29.220556+00:00"
 }

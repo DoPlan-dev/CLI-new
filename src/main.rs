@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 // Re-export from lib for binary
-use doplan::commands::{discuss, generate, plan, implement, next, progress, phase};
+use doplan::commands::{discuss, generate, plan, implement, next, progress, phase, feature};
 
 #[derive(Parser)]
 #[command(name = "doplan")]
@@ -75,6 +75,7 @@ async fn main() -> Result<()> {
                 "next" => next::execute(args).await,
                 "progress" => progress::execute(args).await,
                 "phase" => phase::execute(args).await,
+                "feature" => feature::execute(args).await,
                 _ => {
                     eprintln!("Unknown command: {}", command);
                     Ok(())
