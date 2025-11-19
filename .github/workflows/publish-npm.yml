@@ -49,6 +49,8 @@ jobs:
           echo "✓ All versions synchronized"
 
       - name: Run tests
+        env:
+          RUST_TEST_THREADS: 1
         run: cargo test --verbose
 
       - name: Build release binary
