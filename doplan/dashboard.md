@@ -2,28 +2,17 @@
 
 **Project:** DoPlan CLI
 
-**Last Updated:** 2025-11-19 00:37:57 UTC
+**Last Updated:** 2025-11-19 01:06:10 UTC
 
 ---
 
 ## Overall Progress
 
-**0.0%** Complete
+**50.0%** Complete
 
-[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]
+[███████████████░░░░░░░░░░░░░░░]
 
 ## Phase Progress
-
-### foundation
-
-**0.0%** Complete
-
-[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]
-
-#### Features
-
-- **document generation** (high) - 0.0% - not_started
-- **project planning** (high) - 0.0% - not_started
 
 ### enhancement
 
@@ -37,19 +26,30 @@
 
 ### core features
 
-**0.0%** Complete
+**50.0%** Complete
 
-[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]
+[███████████████░░░░░░░░░░░░░░░]
 
 #### Features
 
 - **feature tracking** (medium) - 0.0% - not_started
-- **phase management** (medium) - 0.0% - not_started
+- **phase management** (medium) - 100.0% - completed
+
+### foundation
+
+**100.0%** Complete
+
+[██████████████████████████████]
+
+#### Features
+
+- **document generation** (high) - 100.0% - completed
+- **project planning** (high) - 100.0% - completed
 
 ## Task Summary
 
 - **Total Tasks:** 15
-- **Completed:** 0
+- **Completed:** 9
 - **In Progress:** 0
-- **Not Started:** 15
+- **Not Started:** 6
 
