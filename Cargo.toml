@@ -1,6 +1,6 @@
 [package]
 name = "doplan"
-version = "1.0.8-beta"
+version = "1.0.9-beta"
 edition = "2021"
 authors = ["DoPlan Team <support@doplan.dev>"]
 license = "MIT"
