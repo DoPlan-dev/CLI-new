@@ -78,3 +78,85 @@ pub fn validate_content(content: &str, min_length: usize) -> Result<()> {
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_ensure_dir() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_path = temp_dir.path().join("test_dir");
+        
+        assert!(!test_path.exists());
+        ensure_dir(&test_path).unwrap();
+        assert!(test_path.exists());
+        assert!(test_path.is_dir());
+    }
+
+    #[test]
+    fn test_ensure_dir_nested() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_path = temp_dir.path().join("a").join("b").join("c");
+        
+        assert!(!test_path.exists());
+        ensure_dir(&test_path).unwrap();
+        assert!(test_path.exists());
+        assert!(test_path.is_dir());
+    }
+
+    #[test]
+    fn test_verify_file_write() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test.txt");
+        
+        // File doesn't exist
+        assert!(verify_file_write(&test_file, 10).is_err());
+        
+        // Create file with content
+        std::fs::write(&test_file, "Hello, World!").unwrap();
+        
+        // Should pass with min_size 10
+        assert!(verify_file_write(&test_file, 10).is_ok());
+        
+        // Should fail with min_size 100
+        assert!(verify_file_write(&test_file, 100).is_err());
+    }
+
+    #[test]
+    fn test_validate_write_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let parent_dir = temp_dir.path().join("parent");
+        std::fs::create_dir(&parent_dir).unwrap();
+        
+        let test_file = parent_dir.join("test.txt");
+        
+        // Should pass - parent exists
+        assert!(validate_write_path(&test_file).is_ok());
+        
+        // Should fail - parent doesn't exist
+        let bad_file = temp_dir.path().join("nonexistent").join("test.txt");
+        assert!(validate_write_path(&bad_file).is_err());
+        
+        // Should fail - path is a directory
+        assert!(validate_write_path(&parent_dir).is_err());
+    }
+
+    #[test]
+    fn test_validate_content() {
+        // Valid content
+        assert!(validate_content("This is a long enough string", 10).is_ok());
+        
+        // Too short
+        assert!(validate_content("Short", 10).is_err());
+        
+        // Empty string
+        assert!(validate_content("", 10).is_err());
+        
+        // Whitespace only
+        assert!(validate_content("   ", 10).is_err());
+        
+        // Exactly min_length
+        assert!(validate_content("1234567890", 10).is_ok());
+    }
+}

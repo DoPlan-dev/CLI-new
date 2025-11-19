@@ -1,16 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-mod commands;
-mod config;
-mod context;
-mod error;
-mod generators;
-mod integration;
-mod state;
-mod utils;
-
-use commands::{discuss, generate, plan, implement, next, progress};
+// Re-export from lib for binary
+use doplan::commands::{discuss, generate, plan, implement, next, progress};
 
 #[derive(Parser)]
 #[command(name = "doplan")]
