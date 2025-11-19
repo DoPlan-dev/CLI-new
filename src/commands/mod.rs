@@ -6,4 +6,5 @@ pub mod next;
 pub mod progress;
 pub mod phase;
 pub mod feature;
+pub mod dashboard;
 

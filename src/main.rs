@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 // Re-export from lib for binary
-use doplan::commands::{discuss, generate, plan, implement, next, progress, phase, feature};
+use doplan::commands::{discuss, generate, plan, implement, next, progress, phase, feature, dashboard};
 
 #[derive(Parser)]
 #[command(name = "doplan")]
@@ -55,8 +55,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some(Commands::Dashboard) => {
-            println!("Dashboard command not yet implemented");
-            Ok(())
+            dashboard::execute(vec![]).await
         }
         Some(Commands::Server) => {
             println!("Server command not yet implemented");
