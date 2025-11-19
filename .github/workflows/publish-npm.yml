@@ -28,6 +28,13 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Detected version: ${VERSION}"
 
+      - name: Switch to main branch BEFORE editing files
+        run: |
+          git fetch origin main
+          git checkout main
+          git pull origin main
+          echo "✓ Now working on main branch"
+
       - name: Update version in package.json
         run: |
           jq --arg v "${{ steps.get_version.outputs.version }}" '.version = $v' package.json > tmp.json
@@ -44,6 +51,10 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add package.json Cargo.toml
+          if git diff --cached --quiet; then
+            echo "No version changes to commit"
+            exit 0
+          fi
           git commit -m "chore: version bump to ${{ steps.get_version.outputs.version }}"
           git push
           echo "✓ Version bump committed"
