@@ -72,6 +72,8 @@ When you create a GitHub Release:
 2. The `publish-npm.yml` workflow publishes to npm
 3. Both workflows use `NPM_TOKEN` from secrets
 
+**Note:** The `publish-npm.yml` workflow explicitly creates `~/.npmrc` with your token to ensure authentication works reliably. The `setup-node` action's automatic authentication is complemented by explicit configuration.
+
 ### Manual Testing
 
 You can test the setup by:

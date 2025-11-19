@@ -30,6 +30,16 @@ jobs:
           node-version: '18'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Setup npm authentication
+        run: |
+          # Explicitly create .npmrc for npm publish (setup-node may not always work)
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm config set registry https://registry.npmjs.org/
+          npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
+          echo "✓ npm authentication configured"
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -42,12 +52,36 @@ jobs:
         run: cargo test --verbose
 
       - name: Build release binary
-        run: cargo build --release --verbose
+        run: |
+          cargo build --release --verbose
+          echo "Build completed. Checking for binary..."
 
       - name: Verify binary exists
         run: |
-          if [ ! -f target/release/doplan ]; then
-            echo "Error: Binary not found after build"
+          # Check for binary in default location
+          if [ -f target/release/doplan ]; then
+            echo "✓ Binary found at target/release/doplan"
+            ls -lh target/release/doplan
+          else
+            # Check if it's a workspace or different location
+            echo "Checking alternative locations..."
+            find target -name "doplan" -type f 2>/dev/null || true
+            find target -name "doplan.exe" -type f 2>/dev/null || true
+            
+            # Verify Cargo.toml configuration
+            echo "Checking Cargo.toml configuration..."
+            if grep -q "\[\[bin\]\]" Cargo.toml; then
+              echo "Binary target found in Cargo.toml"
+              grep -A 2 "\[\[bin\]\]" Cargo.toml
+            else
+              echo "Warning: No [[bin]] section found in Cargo.toml"
+            fi
+            
+            # List target/release contents
+            echo "Contents of target/release:"
+            ls -la target/release/ || echo "target/release directory does not exist"
+            
+            echo "Error: Binary not found at target/release/doplan"
             exit 1
           fi
           echo "✓ Binary built successfully"
@@ -65,7 +99,7 @@ jobs:
       - name: Publish to npm
         run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verify published package
         run: |
