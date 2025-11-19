@@ -262,12 +262,8 @@ fn test_dpr_generation() -> Result<()> {
     let result = generators::dpr::generate(&state);
     
     if let Err(ref e) = result {
-        eprintln!("DPR generation failed: {:#}", e);
-        // Try to get more context about what went wrong
-        if let Some(source) = e.source() {
-            eprintln!("Caused by: {:#}", source);
-        }
-        // Print the full error chain
+        eprintln!("DPR Generation Error: {:#}", e);
+        // Print the full error chain for debugging
         let mut current = e.source();
         let mut depth = 0;
         while let Some(cause) = current {
@@ -275,9 +271,11 @@ fn test_dpr_generation() -> Result<()> {
             eprintln!("  Error chain depth {}: {}", depth, cause);
             current = cause.source();
         }
+        // Also print the debug format for more details
+        eprintln!("Full error debug: {:?}", e);
     }
     
-    assert!(result.is_ok(), "DPR generation should succeed. Error: {}", 
+    assert!(result.is_ok(), "DPR generation should succeed. Error details: {:#}", 
         result.as_ref().unwrap_err());
     let generated = result?;
     assert_eq!(generated.len(), 3);

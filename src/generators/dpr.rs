@@ -12,18 +12,30 @@ pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
         anyhow::bail!("Project state is incomplete: missing project_name. Run /discuss first.");
     }
 
+    // Get current working directory first - this can fail in some environments
+    let current_dir = std::env::current_dir()
+        .context("Failed to get current working directory. Ensure you're in a valid project directory")?;
+    
     let doplan_dir = utils::doplan_dir()
-        .context("Failed to get doplan directory")?;
+        .with_context(|| format!("Failed to get doplan directory from current directory: {}", current_dir.display()))?;
     let plan_dir = doplan_dir.join("plan");
     let design_dir = doplan_dir.join("design");
     
     // Ensure doplan directory exists
     utils::ensure_dir(&doplan_dir)
-        .context("Failed to create doplan directory")?;
+        .with_context(|| format!("Failed to create doplan directory: {}", doplan_dir.display()))?;
     
-    // Ensure design directory exists
+    // Ensure design directory exists (this is required for output)
     utils::ensure_dir(&design_dir)
-        .context("Failed to create design directory")?;
+        .with_context(|| format!("Failed to create design directory: {}", design_dir.display()))?;
+    
+    // Verify design directory was actually created and is writable
+    if !design_dir.exists() {
+        anyhow::bail!("Design directory does not exist after creation: {}", design_dir.display());
+    }
+    if !design_dir.is_dir() {
+        anyhow::bail!("Design path exists but is not a directory: {}", design_dir.display());
+    }
 
     let mut generated = Vec::new();
 
@@ -66,22 +78,32 @@ pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
 
     // Generate DPR.md
     let dpr_path = design_dir.join("DPR.md");
+    // Ensure parent directory exists right before writing (defensive check)
+    if let Some(parent) = dpr_path.parent() {
+        utils::ensure_dir(parent)
+            .with_context(|| format!("Failed to ensure parent directory exists for DPR.md: {}", parent.display()))?;
+    }
     utils::validate_write_path(&dpr_path)
         .with_context(|| format!("Invalid path for DPR.md: {}", dpr_path.display()))?;
     generate_dpr_md(&dpr_path, state, &all_pages, &all_sections, &all_components, &all_cards)
         .with_context(|| format!("Failed to generate DPR.md at: {}", dpr_path.display()))?;
     utils::verify_file_write(&dpr_path, 100)
-        .with_context(|| format!("DPR file verification failed: {}", dpr_path.display()))?;
+        .with_context(|| format!("DPR file verification failed: {} (file may be too small or not created)", dpr_path.display()))?;
     generated.push(dpr_path);
 
     // Generate design-tokens.json
     let tokens_path = design_dir.join("design-tokens.json");
+    // Ensure parent directory exists right before writing (defensive check)
+    if let Some(parent) = tokens_path.parent() {
+        utils::ensure_dir(parent)
+            .with_context(|| format!("Failed to ensure parent directory exists for design-tokens.json: {}", parent.display()))?;
+    }
     utils::validate_write_path(&tokens_path)
         .with_context(|| format!("Invalid path for design-tokens.json: {}", tokens_path.display()))?;
     generate_design_tokens(&tokens_path)
         .with_context(|| format!("Failed to generate design-tokens.json at: {}", tokens_path.display()))?;
     utils::verify_file_write(&tokens_path, 100)
-        .with_context(|| format!("Design tokens file verification failed: {}", tokens_path.display()))?;
+        .with_context(|| format!("Design tokens file verification failed: {} (file may be too small or not created)", tokens_path.display()))?;
     generated.push(tokens_path);
 
     // Generate design_rules.mdc
@@ -91,12 +113,17 @@ pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
     utils::ensure_dir(&rules_dir)
         .with_context(|| format!("Failed to create rules directory: {}", rules_dir.display()))?;
     let rules_path = rules_dir.join("design_rules.mdc");
+    // Ensure parent directory exists right before writing (defensive check)
+    if let Some(parent) = rules_path.parent() {
+        utils::ensure_dir(parent)
+            .with_context(|| format!("Failed to ensure parent directory exists for design_rules.mdc: {}", parent.display()))?;
+    }
     utils::validate_write_path(&rules_path)
         .with_context(|| format!("Invalid path for design_rules.mdc: {}", rules_path.display()))?;
     generate_design_rules(&rules_path, &all_pages, &all_sections, &all_components, &all_cards)
         .with_context(|| format!("Failed to generate design_rules.mdc at: {}", rules_path.display()))?;
     utils::verify_file_write(&rules_path, 100)
-        .with_context(|| format!("Design rules file verification failed: {}", rules_path.display()))?;
+        .with_context(|| format!("Design rules file verification failed: {} (file may be too small or not created)", rules_path.display()))?;
     generated.push(rules_path);
 
     Ok(generated)
