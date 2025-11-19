@@ -1,5 +1,27 @@
 # DoPlan CLI - Release Notes
 
+## Version 1.0.7-beta - Beta Release
+
+**Release Date:** November 19, 2025  
+**Status:** Beta
+
+---
+
+### Highlights
+
+- New release branch `Release/V1.0.7/beta` for staging beta builds
+- Version synchronization bumped to `1.0.7-beta` across npm and Cargo metadata
+- Release automation hardened:
+  - Version bump workflow now works even if repository uses `master` instead of `main`
+  - Safe commit step that skips gracefully when no file changes are detected
+
+### Next Steps
+
+- Validate beta binaries across all supported platforms
+- Run publish workflow to ship the npm package once verification is complete
+
+---
+
 ## Version 1.0.0 - Production Release 🎉
 
 **Release Date:** November 19, 2025  
