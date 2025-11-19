@@ -1,0 +1,44 @@
+[package]
+name = "doplan"
+version = "0.0.20-beta"
+edition = "2021"
+authors = ["DoPlan Team <support@doplan.dev>"]
+license = "MIT"
+description = "Project workflow automation tool that transforms app ideas into well-structured, documented, and trackable development projects"
+repository = "https://github.com/DoPlan-dev/CLI"
+
+[[bin]]
+name = "doplan"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+ratatui = "0.26"
+crossterm = "0.28"
+git2 = "0.18"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+tokio = { version = "1.35", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+anyhow = "1.0"
+thiserror = "1.0"
+colored = "2.1"
+indicatif = "0.17"
+walkdir = "2.4"
+regex = "1.10"
+dialoguer = "0.11"
+chrono = "0.4"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
+tempfile = "3.10"
+mockito = "1.2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+

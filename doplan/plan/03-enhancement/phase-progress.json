@@ -1,0 +1,12 @@
+{
+  "features": {
+    "completed": 0,
+    "in_progress": 0,
+    "not_started": 1,
+    "total": 1
+  },
+  "phase": "enhancement",
+  "progress": 0.0,
+  "status": "not_started",
+  "updated_at": "2025-11-19T00:37:57.125788+00:00"
+}

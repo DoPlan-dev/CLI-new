@@ -1,0 +1,153 @@
+# DoPlan Communication Rules
+
+These rules govern how AI agents **MUST** communicate and collaborate within the DoPlan workflow.
+
+## ⚠️ CRITICAL: Agent Handoff Protocol
+
+**When your work is complete, you MUST tag the next agent.** This ensures the workflow continues smoothly.
+
+## Communication Principles
+
+- Be clear and concise in all communications
+- Reference specific files and line numbers when discussing code
+- Use the DoPlan workflow stages appropriately
+- Always update state and progress files after actions
+- Follow the established naming conventions
+- **Tag the next agent when work is complete**
+- **Wait for previous agents to finish before starting**
+
+## Agent Collaboration & Handoff
+
+### Workflow Sequence & Handoffs
+
+1. **@planner** → **@designer**
+   - @planner completes planning
+   - Tags @designer: "Planning complete. @designer please create design specifications."
+   - @designer waits for @planner to finish
+
+2. **@designer** → **@coder**
+   - @designer completes design
+   - Tags @coder: "Design complete. @coder please begin implementation."
+   - @coder waits for @planner AND @designer to finish
+
+3. **@coder** → **@tester**
+   - @coder completes implementation
+   - Tags @tester: "Implementation complete. @tester please run tests."
+   - @tester ONLY begins when tagged by @coder
+
+4. **@tester** → **@reviewer**
+   - @tester completes testing
+   - Tags @reviewer: "All tests passed. Screenshot saved. @reviewer please review."
+   - @reviewer ONLY reviews AFTER @tester has successfully run all tests
+
+5. **@reviewer** → **@devops** OR **@coder**
+   - If approved: Tags @devops: "Code review passed. @devops please deploy."
+   - If changes needed: Tags @coder: "Changes needed. @coder please address."
+   - @devops ONLY begins AFTER @reviewer has approved
+
+6. **@devops** → **Team**
+   - @devops completes deployment
+   - Reports to team: "Deployment successful" or "Deployment failed"
+
+## Agent Roles & Responsibilities
+
+### @planner
+- **Role:** Senior project planner
+- **Starts:** First (project start)
+- **Hands off to:** @designer
+- **Must complete:** Planning, PRD, folder structure
+
+### @designer
+- **Role:** UI/UX specialist
+- **Starts:** After @planner completes
+- **Hands off to:** @coder
+- **Must complete:** Design specifications following design_rules.mdc
+
+### @coder
+- **Role:** Implementation specialist
+- **Starts:** After @planner AND @designer complete
+- **Hands off to:** @tester
+- **Must complete:** Feature implementation
+
+### @tester
+- **Role:** QA & Test Automation Specialist
+- **Starts:** When tagged by @coder
+- **Hands off to:** @reviewer
+- **Must complete:** Tests, screenshots, test report
+
+### @reviewer
+- **Role:** Quality assurance
+- **Starts:** AFTER @tester has successfully run all tests
+- **Hands off to:** @devops (if approved) OR @coder (if changes needed)
+- **Must complete:** Code review
+
+### @devops
+- **Role:** Deployment and infrastructure specialist
+- **Starts:** AFTER @reviewer has approved
+- **Hands off to:** Team (reports status)
+- **Must complete:** Deployment
+
+## Tagging Format
+
+**When tagging the next agent:**
+
+```
+✅ [Your work] complete for {feature-name}. [Brief summary]. @{next-agent} please [next action].
+```
+
+**Examples:**
+- "✅ Planning complete. Created 3 phases with 8 features. @designer please create design specifications."
+- "✅ Design complete. Design follows DPR and design_rules.mdc. @coder please begin implementation."
+- "✅ Implementation complete. All tasks done. @tester please run tests."
+- "✅ All tests passed. Screenshot saved to .doplan/artifacts/screenshots/01-auth/01-login.png. @reviewer please review."
+- "✅ Code review passed. All requirements met. @devops please deploy."
+- "❌ Code review: Changes needed. Issues: [list]. @coder please address."
+
+## File References
+
+When discussing code or files:
+- Use absolute paths: `doplan/01-user-authentication/01-login-with-email/plan.md`
+- Reference line numbers when needed
+- Include file context in discussions
+- Use numbered folder structure
+
+## State Updates
+
+After any action:
+- Update relevant progress.json files
+- Update state file if applicable
+- Regenerate dashboard if progress changed
+- Commit changes with clear messages
+- **Tag the next agent**
+
+## Error Handling
+
+**If you encounter issues:**
+- Tag the appropriate agent for clarification
+- Document the issue
+- Provide context and error details
+- Request specific help
+
+**Examples:**
+- "@planner: Need clarification on {feature}. Question: {question}."
+- "@designer: Design clarification needed. Issue: {issue}."
+- "@coder: Implementation issue. Error: {error}. @coder please help."
+
+## Multi-Agent Conversations
+
+Agents can work together in conversations. Always:
+1. Tag agents explicitly
+2. Provide context
+3. Reference relevant files
+4. Follow the workflow sequence
+5. Wait for responses before proceeding
+
+## Best Practices
+
+- Always tag the next agent when work is complete
+- Wait for previous agents to finish
+- Provide clear context when tagging
+- Reference specific files and line numbers
+- Update progress files after actions
+- Follow the workflow sequence strictly
+- Be respectful and constructive in feedback

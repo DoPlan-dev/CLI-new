@@ -1,0 +1,349 @@
+use anyhow::Result;
+use doplan::state::{ProjectState, Feature, Phase};
+use doplan::generators;
+use tempfile::TempDir;
+use std::fs;
+use std::sync::Mutex;
+
+fn create_test_state() -> ProjectState {
+    ProjectState {
+        project_name: Some("Test Project".to_string()),
+        idea: Some("A test project idea".to_string()),
+        tech_stack: Some(vec!["Rust".to_string(), "PostgreSQL".to_string()]),
+        features: Some(vec![
+            Feature {
+                name: "Feature 1".to_string(),
+                description: "First feature".to_string(),
+                priority: "high".to_string(),
+            },
+            Feature {
+                name: "Feature 2".to_string(),
+                description: "Second feature".to_string(),
+                priority: "medium".to_string(),
+            },
+        ]),
+        phases: Some(vec![
+            Phase {
+                name: "Phase 1".to_string(),
+                description: "First phase".to_string(),
+                features: vec!["Feature 1".to_string()],
+            },
+        ]),
+        improvements: None,
+        notes: None,
+    }
+}
+
+// Use a mutex to prevent concurrent test execution that could interfere with current_dir
+static TEST_MUTEX: Mutex<()> = Mutex::new(());
+
+fn setup_test_env() -> Result<(TempDir, ProjectState)> {
+    let _lock = TEST_MUTEX.lock().unwrap();
+    let temp_dir = TempDir::new()?;
+    
+    // Create necessary directories using absolute paths
+    let doplan_dir = temp_dir.path().join("doplan");
+    let dot_doplan_dir = temp_dir.path().join(".doplan");
+    fs::create_dir_all(&doplan_dir)?;
+    fs::create_dir_all(&dot_doplan_dir)?;
+    
+    // Save state to .doplan/state.json
+    let state = create_test_state();
+    let state_path = dot_doplan_dir.join("state.json");
+    let state_json = serde_json::to_string_pretty(&state)?;
+    fs::write(&state_path, state_json)?;
+    
+    // Change to temp directory for tests
+    std::env::set_current_dir(temp_dir.path())?;
+    
+    Ok((temp_dir, state))
+}
+
+fn cleanup_test_env(temp_dir: TempDir) {
+    let _lock = TEST_MUTEX.lock().unwrap();
+    drop(temp_dir);
+}
+
+#[test]
+fn test_prd_generation() -> Result<()> {
+    let (temp_dir, state) = setup_test_env()?;
+    
+    let idea_notes = Some("# Test Idea Notes\n\nWhat problem does this solve?\n\nTest problem description".to_string());
+    
+    let result = generators::prd::generate(&state, &idea_notes);
+    
+    assert!(result.is_ok());
+    let prd_path = result?;
+    assert!(prd_path.exists());
+    assert!(prd_path.ends_with("PRD.md"));
+    
+    let content = fs::read_to_string(&prd_path)?;
+    assert!(content.contains("Test Project"));
+    assert!(content.contains("Product Requirements Document"));
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_prd_generation_missing_state() -> Result<()> {
+    let (temp_dir, _) = setup_test_env()?;
+    
+    let empty_state = ProjectState::new();
+    let idea_notes = None;
+    
+    let result = generators::prd::generate(&empty_state, &idea_notes);
+    
+    // Should fail with empty state (missing both project_name and idea)
+    assert!(result.is_err());
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_structure_generation() -> Result<()> {
+    let (temp_dir, state) = setup_test_env()?;
+    
+    let result = generators::structure::generate(&state, &None);
+    
+    assert!(result.is_ok());
+    let structure_path = result?;
+    assert!(structure_path.exists());
+    assert!(structure_path.ends_with("structure.md"));
+    
+    let content = fs::read_to_string(&structure_path)?;
+    assert!(content.contains("Test Project"));
+    assert!(content.contains("Project Structure"));
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_api_spec_generation() -> Result<()> {
+    let (temp_dir, state) = setup_test_env()?;
+    
+    let result = generators::api_spec::generate(&state, &None);
+    
+    assert!(result.is_ok());
+    let api_spec_path = result?;
+    assert!(api_spec_path.exists());
+    assert!(api_spec_path.ends_with("api-spec.json"));
+    
+    let content = fs::read_to_string(&api_spec_path)?;
+    assert!(content.contains("Test Project"));
+    assert!(content.contains("openapi"));
+    assert!(content.contains("3.0.0"));
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_data_model_generation() -> Result<()> {
+    let (temp_dir, state) = setup_test_env()?;
+    
+    let result = generators::data_model::generate(&state, &None);
+    
+    assert!(result.is_ok());
+    let data_model_path = result?;
+    assert!(data_model_path.exists());
+    assert!(data_model_path.ends_with("data-model.md"));
+    
+    let content = fs::read_to_string(&data_model_path)?;
+    assert!(content.contains("Test Project"));
+    assert!(content.contains("Data Model"));
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_templates_generation() -> Result<()> {
+    let (temp_dir, _) = setup_test_env()?;
+    
+    let result = generators::templates::generate_all();
+    
+    assert!(result.is_ok());
+    let generated = result?;
+    assert_eq!(generated.len(), 3);
+    
+    // Check plan template
+    assert!(generated.iter().any(|p| p.ends_with("plan-template.md")));
+    // Check design template
+    assert!(generated.iter().any(|p| p.ends_with("design-template.md")));
+    // Check tasks template
+    assert!(generated.iter().any(|p| p.ends_with("tasks-template.md")));
+    
+    // Verify all files exist
+    for path in &generated {
+        assert!(path.exists());
+        let content = fs::read_to_string(path)?;
+        assert!(content.len() > 100);
+    }
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_dpr_generation() -> Result<()> {
+    let (temp_dir, state) = setup_test_env()?;
+    
+    // Create plan structure for DPR generation
+    fs::create_dir_all("doplan/plan/01-phase/01-feature")?;
+    fs::write(
+        "doplan/plan/01-phase/01-feature/plan.md",
+        r#"# Feature Plan
+
+### Pages
+- Home Page
+- About Page
+
+### Sections
+- Header
+- Footer
+
+### Components
+- Button
+- Input
+
+### Cards/UI Elements
+- Card Component
+"#,
+    )?;
+    
+    // Create .doplan directory structure
+    fs::create_dir_all(".doplan/ai/rules")?;
+    
+    let result = generators::dpr::generate(&state);
+    
+    assert!(result.is_ok());
+    let generated = result?;
+    assert_eq!(generated.len(), 3);
+    
+    // Check DPR.md
+    assert!(generated.iter().any(|p| p.ends_with("DPR.md")));
+    // Check design-tokens.json
+    assert!(generated.iter().any(|p| p.ends_with("design-tokens.json")));
+    // Check design_rules.mdc
+    assert!(generated.iter().any(|p| p.ends_with("design_rules.mdc")));
+    
+    // Verify DPR content
+    let dpr_path = generated.iter().find(|p| p.ends_with("DPR.md")).unwrap();
+    let content = fs::read_to_string(dpr_path)?;
+    assert!(content.contains("Test Project"));
+    assert!(content.contains("Home Page"));
+    assert!(content.contains("Button"));
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_sops_generation() -> Result<()> {
+    let (temp_dir, state) = setup_test_env()?;
+    
+    let result = generators::sops::generate(&state);
+    
+    assert!(result.is_ok());
+    let generated = result?;
+    
+    // Should generate SOPS for PostgreSQL (from tech_stack)
+    assert!(generated.len() > 0);
+    
+    // Check for PostgreSQL SOPS
+    let postgres_sops = generated.iter().find(|p| p.to_string_lossy().contains("postgresql"));
+    assert!(postgres_sops.is_some());
+    
+    if let Some(sops_path) = postgres_sops {
+        let content = fs::read_to_string(sops_path)?;
+        assert!(content.contains("postgresql"));
+        assert!(content.contains("Service Operating Procedures"));
+    }
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_rakd_generation() -> Result<()> {
+    let (temp_dir, state) = setup_test_env()?;
+    
+    let result = generators::rakd::generate(&state);
+    
+    assert!(result.is_ok());
+    let rakd_path = result?;
+    assert!(rakd_path.exists());
+    assert!(rakd_path.ends_with("RAKD.md"));
+    
+    let content = fs::read_to_string(&rakd_path)?;
+    assert!(content.contains("Test Project"));
+    assert!(content.contains("Required API Keys"));
+    
+    // Should detect DATABASE_URL from PostgreSQL
+    assert!(content.contains("DATABASE_URL"));
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_context_generation() -> Result<()> {
+    let (temp_dir, state) = setup_test_env()?;
+    
+    let result = generators::context::generate(&state);
+    
+    assert!(result.is_ok());
+    let context_path = result?;
+    assert!(context_path.exists());
+    assert!(context_path.ends_with("CONTEXT.md"));
+    
+    let content = fs::read_to_string(&context_path)?;
+    assert!(content.contains("Test Project"));
+    assert!(content.contains("Project Context"));
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_readme_generation() -> Result<()> {
+    let (temp_dir, state) = setup_test_env()?;
+    
+    let result = generators::readme::generate(&state);
+    
+    assert!(result.is_ok());
+    let readme_path = result?;
+    assert!(readme_path.exists());
+    assert!(readme_path.ends_with("README.md"));
+    
+    let content = fs::read_to_string(&readme_path)?;
+    assert!(content.contains("Test Project"));
+    assert!(content.contains("A test project idea"));
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+
+#[test]
+fn test_generator_error_handling_missing_state() -> Result<()> {
+    let (temp_dir, _) = setup_test_env()?;
+    
+    let empty_state = ProjectState::new();
+    
+    // All generators should fail with empty state (missing project_name)
+    assert!(generators::structure::generate(&empty_state, &None).is_err());
+    assert!(generators::api_spec::generate(&empty_state, &None).is_err());
+    assert!(generators::data_model::generate(&empty_state, &None).is_err());
+    assert!(generators::dpr::generate(&empty_state).is_err());
+    assert!(generators::sops::generate(&empty_state).is_err());
+    assert!(generators::rakd::generate(&empty_state).is_err());
+    assert!(generators::context::generate(&empty_state).is_err());
+    assert!(generators::readme::generate(&empty_state).is_err());
+    
+    cleanup_test_env(temp_dir);
+    Ok(())
+}
+

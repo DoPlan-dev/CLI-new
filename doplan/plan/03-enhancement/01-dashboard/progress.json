@@ -1,0 +1,14 @@
+{
+  "feature": "dashboard",
+  "priority": "low",
+  "progress": 0.0,
+  "status": "not_started",
+  "tasks": {
+    "blocked": 0,
+    "completed": 0,
+    "in_progress": 0,
+    "not_started": 3,
+    "total": 3
+  },
+  "updated_at": "2025-11-19T00:37:57.124139+00:00"
+}

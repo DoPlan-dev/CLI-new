@@ -1,0 +1,16 @@
+# Design Rules
+
+## Overview
+
+Design rules extracted from feature plans for AI agents to follow.
+
+---
+
+## Design Guidelines
+
+1. Follow the design tokens defined in `design-tokens.json`
+2. Maintain consistency across all pages and components
+3. Ensure accessibility (WCAG 2.1 AA)
+4. Use responsive design patterns
+5. Follow the established color system and typography
+
