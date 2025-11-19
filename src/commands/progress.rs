@@ -20,6 +20,7 @@ struct TaskStats {
 #[derive(Debug, Clone)]
 struct FeatureProgress {
     feature_name: String,
+    #[allow(dead_code)]
     phase_name: String,
     priority: String,
     progress: f64,
@@ -511,6 +512,7 @@ fn extract_name_from_path(path: &str) -> String {
         .replace("-", " ")
 }
 
+#[allow(dead_code)]
 fn sanitize_name(name: &str) -> String {
     name.to_lowercase()
         .replace(" ", "-")

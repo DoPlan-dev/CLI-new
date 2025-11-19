@@ -241,10 +241,6 @@ pub async fn execute(args: Vec<String>) -> Result<()> {
     let tree = repo.find_tree(tree_id)
         .context("Failed to find tree")?;
 
-    let head_commit = repo.head()
-        .and_then(|h| h.peel_to_commit())
-        .ok();
-
     let signature = Signature::now("DoPlan", "doplan@doplan.dev")
         .context("Failed to create signature")?;
 

@@ -2,9 +2,6 @@ use anyhow::{Context, Result};
 use colored::*;
 use dialoguer::{Input, Select};
 use crate::state::{ProjectState, Phase};
-use crate::utils;
-use serde_json::json;
-use std::path::PathBuf;
 
 /// Execute phase management commands
 pub async fn execute(args: Vec<String>) -> Result<()> {

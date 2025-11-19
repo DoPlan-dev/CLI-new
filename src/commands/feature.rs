@@ -2,7 +2,6 @@ use anyhow::{Context, Result};
 use colored::*;
 use dialoguer::{Input, Select};
 use crate::state::{ProjectState, Feature};
-use std::path::PathBuf;
 
 /// Execute feature management commands
 pub async fn execute(args: Vec<String>) -> Result<()> {
