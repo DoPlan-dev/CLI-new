@@ -16,6 +16,12 @@ pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
         .context("Failed to get doplan directory")?;
     let plan_dir = doplan_dir.join("plan");
     let design_dir = doplan_dir.join("design");
+    
+    // Ensure doplan directory exists
+    utils::ensure_dir(&doplan_dir)
+        .context("Failed to create doplan directory")?;
+    
+    // Ensure design directory exists
     utils::ensure_dir(&design_dir)
         .context("Failed to create design directory")?;
 
@@ -28,33 +34,54 @@ pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
     let mut all_cards = Vec::new();
 
     if plan_dir.exists() {
+        let plan_files_found = WalkDir::new(&plan_dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name() == "plan.md")
+            .count();
+        
+        if plan_files_found == 0 {
+            // Log a warning but continue - DPR can be generated without plan files
+            eprintln!("Warning: No plan.md files found in {}", plan_dir.display());
+        }
+        
         for entry in WalkDir::new(&plan_dir)
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_name() == "plan.md")
         {
-            if let Ok(content) = fs::read_to_string(entry.path()) {
-                extract_design_info(&content, &mut all_pages, &mut all_sections, &mut all_components, &mut all_cards);
+            match fs::read_to_string(entry.path()) {
+                Ok(content) => {
+                    extract_design_info(&content, &mut all_pages, &mut all_sections, &mut all_components, &mut all_cards);
+                }
+                Err(e) => {
+                    eprintln!("Warning: Failed to read plan.md at {}: {}", entry.path().display(), e);
+                }
             }
         }
+    } else {
+        // Plan directory doesn't exist - this is okay, DPR can still be generated
+        eprintln!("Info: Plan directory does not exist at {}, generating DPR without plan data", plan_dir.display());
     }
 
     // Generate DPR.md
     let dpr_path = design_dir.join("DPR.md");
     utils::validate_write_path(&dpr_path)
-        .context("Invalid path for DPR.md")?;
-    generate_dpr_md(&dpr_path, state, &all_pages, &all_sections, &all_components, &all_cards)?;
+        .with_context(|| format!("Invalid path for DPR.md: {}", dpr_path.display()))?;
+    generate_dpr_md(&dpr_path, state, &all_pages, &all_sections, &all_components, &all_cards)
+        .with_context(|| format!("Failed to generate DPR.md at: {}", dpr_path.display()))?;
     utils::verify_file_write(&dpr_path, 100)
-        .context("DPR file verification failed")?;
+        .with_context(|| format!("DPR file verification failed: {}", dpr_path.display()))?;
     generated.push(dpr_path);
 
     // Generate design-tokens.json
     let tokens_path = design_dir.join("design-tokens.json");
     utils::validate_write_path(&tokens_path)
-        .context("Invalid path for design-tokens.json")?;
-    generate_design_tokens(&tokens_path)?;
+        .with_context(|| format!("Invalid path for design-tokens.json: {}", tokens_path.display()))?;
+    generate_design_tokens(&tokens_path)
+        .with_context(|| format!("Failed to generate design-tokens.json at: {}", tokens_path.display()))?;
     utils::verify_file_write(&tokens_path, 100)
-        .context("Design tokens file verification failed")?;
+        .with_context(|| format!("Design tokens file verification failed: {}", tokens_path.display()))?;
     generated.push(tokens_path);
 
     // Generate design_rules.mdc
@@ -62,13 +89,14 @@ pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
         .context("Failed to get .doplan directory")?;
     let rules_dir = dot_doplan.join("ai").join("rules");
     utils::ensure_dir(&rules_dir)
-        .context("Failed to create rules directory")?;
+        .with_context(|| format!("Failed to create rules directory: {}", rules_dir.display()))?;
     let rules_path = rules_dir.join("design_rules.mdc");
     utils::validate_write_path(&rules_path)
-        .context("Invalid path for design_rules.mdc")?;
-    generate_design_rules(&rules_path, &all_pages, &all_sections, &all_components, &all_cards)?;
+        .with_context(|| format!("Invalid path for design_rules.mdc: {}", rules_path.display()))?;
+    generate_design_rules(&rules_path, &all_pages, &all_sections, &all_components, &all_cards)
+        .with_context(|| format!("Failed to generate design_rules.mdc at: {}", rules_path.display()))?;
     utils::verify_file_write(&rules_path, 100)
-        .context("Design rules file verification failed")?;
+        .with_context(|| format!("Design rules file verification failed: {}", rules_path.display()))?;
     generated.push(rules_path);
 
     Ok(generated)
