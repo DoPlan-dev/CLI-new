@@ -5,11 +5,20 @@ use crate::state::ProjectState;
 use crate::utils;
 
 pub fn generate(state: &ProjectState, _idea_notes: &Option<String>) -> Result<PathBuf> {
-    let doplan_dir = utils::doplan_dir()?;
+    // Validate state
+    if state.project_name.is_none() {
+        anyhow::bail!("Project state is incomplete: missing project_name. Run /discuss first.");
+    }
+
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
     let contracts_dir = doplan_dir.join("contracts");
-    utils::ensure_dir(&contracts_dir)?;
+    utils::ensure_dir(&contracts_dir)
+        .context("Failed to create contracts directory")?;
 
     let api_spec_path = contracts_dir.join("api-spec.json");
+    utils::validate_write_path(&api_spec_path)
+        .context("Invalid path for api-spec.json")?;
 
     let project_name = state.project_name.as_ref()
         .map(|s| s.as_str())
@@ -191,10 +200,18 @@ pub fn generate(state: &ProjectState, _idea_notes: &Option<String>) -> Result<Pa
 
     // Write JSON file
     let json_content = serde_json::to_string_pretty(&spec)
-        .context("Failed to serialize API spec")?;
+        .context("Failed to serialize API spec to JSON")?;
     
-    std::fs::write(&api_spec_path, json_content)
-        .context("Failed to write API spec")?;
+    // Validate JSON content
+    utils::validate_content(&json_content, 100)
+        .context("Generated API spec content is too short")?;
+
+    std::fs::write(&api_spec_path, &json_content)
+        .with_context(|| format!("Failed to write API spec to: {}", api_spec_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&api_spec_path, 100)
+        .context("API spec file verification failed")?;
 
     Ok(api_spec_path)
 }

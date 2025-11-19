@@ -13,11 +13,15 @@ pub fn generate_all() -> Result<Vec<PathBuf>> {
 }
 
 pub fn generate_plan_template() -> Result<PathBuf> {
-    let doplan_dir = utils::doplan_dir()?;
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
     let templates_dir = doplan_dir.join("templates");
-    utils::ensure_dir(&templates_dir)?;
+    utils::ensure_dir(&templates_dir)
+        .context("Failed to create templates directory")?;
 
     let template_path = templates_dir.join("plan-template.md");
+    utils::validate_write_path(&template_path)
+        .context("Invalid path for plan-template.md")?;
 
     let content = r#"# Feature Plan Template
 
@@ -88,18 +92,30 @@ Brief description of the feature and its purpose.
 Additional notes and considerations.
 "#;
 
+    // Validate content before writing
+    utils::validate_content(content, 100)
+        .context("Plan template content is too short")?;
+
     std::fs::write(&template_path, content)
-        .context("Failed to write plan template")?;
+        .with_context(|| format!("Failed to write plan template to: {}", template_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&template_path, 100)
+        .context("Plan template file verification failed")?;
 
     Ok(template_path)
 }
 
 pub fn generate_design_template() -> Result<PathBuf> {
-    let doplan_dir = utils::doplan_dir()?;
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
     let templates_dir = doplan_dir.join("templates");
-    utils::ensure_dir(&templates_dir)?;
+    utils::ensure_dir(&templates_dir)
+        .context("Failed to create templates directory")?;
 
     let template_path = templates_dir.join("design-template.md");
+    utils::validate_write_path(&template_path)
+        .context("Invalid path for design-template.md")?;
 
     let content = r##"# Design Specification Template
 
@@ -175,18 +191,30 @@ High-level design description and approach.
 Additional design considerations and notes.
 "##;
 
+    // Validate content before writing
+    utils::validate_content(content, 100)
+        .context("Design template content is too short")?;
+
     std::fs::write(&template_path, content)
-        .context("Failed to write design template")?;
+        .with_context(|| format!("Failed to write design template to: {}", template_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&template_path, 100)
+        .context("Design template file verification failed")?;
 
     Ok(template_path)
 }
 
 pub fn generate_tasks_template() -> Result<PathBuf> {
-    let doplan_dir = utils::doplan_dir()?;
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
     let templates_dir = doplan_dir.join("templates");
-    utils::ensure_dir(&templates_dir)?;
+    utils::ensure_dir(&templates_dir)
+        .context("Failed to create templates directory")?;
 
     let template_path = templates_dir.join("tasks-template.md");
+    utils::validate_write_path(&template_path)
+        .context("Invalid path for tasks-template.md")?;
 
     let content = r#"# Tasks Template
 
@@ -239,8 +267,16 @@ pub fn generate_tasks_template() -> Result<PathBuf> {
 Additional notes about tasks and progress.
 "#;
 
+    // Validate content before writing
+    utils::validate_content(content, 100)
+        .context("Tasks template content is too short")?;
+
     std::fs::write(&template_path, content)
-        .context("Failed to write tasks template")?;
+        .with_context(|| format!("Failed to write tasks template to: {}", template_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&template_path, 100)
+        .context("Tasks template file verification failed")?;
 
     Ok(template_path)
 }

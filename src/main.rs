@@ -10,7 +10,7 @@ mod integration;
 mod state;
 mod utils;
 
-use commands::{discuss, generate, plan, implement};
+use commands::{discuss, generate, plan, implement, next, progress};
 
 #[derive(Parser)]
 #[command(name = "doplan")]
@@ -80,6 +80,8 @@ async fn main() -> Result<()> {
                 "generate" => generate::execute(args).await,
                 "plan" => plan::execute(args).await,
                 "implement" => implement::execute(args).await,
+                "next" => next::execute(args).await,
+                "progress" => progress::execute(args).await,
                 _ => {
                     eprintln!("Unknown command: {}", command);
                     Ok(())

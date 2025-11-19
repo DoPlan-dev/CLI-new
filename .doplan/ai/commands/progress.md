@@ -1,3 +1,4 @@
+--- Cursor Command: progress.md ---
 # Progress
 
 ## Overview
@@ -13,7 +14,7 @@ Update all progress tracking files. Recalculate progress bars for phases and fea
    - Phase-level: `doplan/XX-phase/phase-progress.json`
 6. Regenerate dashboard:
    - `.doplan/dashboard.json`
-   - `.doplan/dashboard.md`
+   - `doplan/dashboard.md`
 7. Sync GitHub data (if enabled)
 8. Update state file: `.doplan/state.json`
 
@@ -21,3 +22,14 @@ Update all progress tracking files. Recalculate progress bars for phases and fea
 - Feature progress: (completed tasks / total tasks) * 100
 - Phase progress: Average of all feature progress in phase
 - Overall progress: Average of all phase progress
+
+## Usage
+Run `/progress` in your IDE to update all progress tracking.
+
+## Execution
+This command is executed via:
+```bash
+doplan execute progress
+```
+
+--- End Command ---

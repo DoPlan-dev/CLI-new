@@ -5,9 +5,16 @@ use crate::state::ProjectState;
 use crate::utils;
 
 pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
-    let doplan_dir = utils::doplan_dir()?;
+    // Validate state
+    if state.project_name.is_none() {
+        anyhow::bail!("Project state is incomplete: missing project_name. Run /discuss first.");
+    }
+
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
     let sops_dir = doplan_dir.join("SOPS");
-    utils::ensure_dir(&sops_dir)?;
+    utils::ensure_dir(&sops_dir)
+        .context("Failed to create SOPS directory")?;
 
     let mut generated = Vec::new();
     let mut services = Vec::new();
@@ -56,10 +63,15 @@ pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
     for service in services {
         let (category, name) = service;
         let category_dir = sops_dir.join(&category);
-        utils::ensure_dir(&category_dir)?;
+        utils::ensure_dir(&category_dir)
+            .with_context(|| format!("Failed to create SOPS category directory: {}", category))?;
 
         let sops_path = category_dir.join(format!("{}.md", name));
+        utils::validate_write_path(&sops_path)
+            .with_context(|| format!("Invalid path for SOPS file: {}", sops_path.display()))?;
         generate_service_sops(&sops_path, &category, &name)?;
+        utils::verify_file_write(&sops_path, 100)
+            .with_context(|| format!("SOPS file verification failed: {}", sops_path.display()))?;
         generated.push(sops_path);
     }
 
@@ -155,8 +167,12 @@ fn generate_service_sops(path: &PathBuf, category: &str, service: &str) -> Resul
     content.push_str("- API reference: _Link_\n");
     content.push_str("- Community: _Link_\n\n");
 
-    std::fs::write(path, content)
-        .context("Failed to write SOPS")?;
+    // Validate content before writing
+    utils::validate_content(&content, 100)
+        .context("Generated SOPS content is too short")?;
+
+    std::fs::write(path, &content)
+        .with_context(|| format!("Failed to write SOPS to: {}", path.display()))?;
 
     Ok(())
 }

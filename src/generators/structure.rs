@@ -4,10 +4,19 @@ use crate::state::ProjectState;
 use crate::utils;
 
 pub fn generate(state: &ProjectState, _idea_notes: &Option<String>) -> Result<PathBuf> {
-    let doplan_dir = utils::doplan_dir()?;
-    utils::ensure_dir(&doplan_dir)?;
+    // Validate state
+    if state.project_name.is_none() {
+        anyhow::bail!("Project state is incomplete: missing project_name. Run /discuss first.");
+    }
+
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
+    utils::ensure_dir(&doplan_dir)
+        .context("Failed to create doplan directory")?;
 
     let structure_path = doplan_dir.join("structure.md");
+    utils::validate_write_path(&structure_path)
+        .context("Invalid path for structure.md")?;
 
     let project_name = state.project_name.as_ref()
         .map(|s| s.as_str())
@@ -124,8 +133,16 @@ pub fn generate(state: &ProjectState, _idea_notes: &Option<String>) -> Result<Pa
     content.push_str("5. **Review**: Code review before merging\n");
     content.push_str("6. **Deployment**: Follow deployment procedures\n\n");
 
-    std::fs::write(&structure_path, content)
-        .context("Failed to write structure document")?;
+    // Validate content before writing
+    utils::validate_content(&content, 200)
+        .context("Generated structure content is too short")?;
+
+    std::fs::write(&structure_path, &content)
+        .with_context(|| format!("Failed to write structure document to: {}", structure_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&structure_path, 200)
+        .context("Structure file verification failed")?;
 
     Ok(structure_path)
 }

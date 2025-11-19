@@ -1,7 +1,7 @@
 {
-  "feature": "Feature Tracking",
+  "feature": "feature tracking",
   "priority": "medium",
-  "progress": 0,
+  "progress": 0.0,
   "status": "not_started",
   "tasks": {
     "blocked": 0,
@@ -10,5 +10,5 @@
     "not_started": 3,
     "total": 3
   },
-  "updated_at": "2025-11-19T00:16:08.664747+00:00"
+  "updated_at": "2025-11-19T00:37:57.124616+00:00"
 }

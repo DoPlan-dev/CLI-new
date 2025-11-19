@@ -116,7 +116,7 @@ pub async fn execute(args: Vec<String>) -> Result<()> {
     // Check if branch already exists
     let branch_exists = {
         let mut found = false;
-        if let Ok(mut branches) = repo.branches(None) {
+        if let Ok(branches) = repo.branches(None) {
             for branch_result in branches {
                 if let Ok((branch, _)) = branch_result {
                     if let Ok(Some(name)) = branch.name() {
@@ -250,11 +250,11 @@ pub async fn execute(args: Vec<String>) -> Result<()> {
 
     let commit_message = format!("docs: add planning docs for {}", feature_name);
     
-    let head_commit = repo.head()
+    let _head_commit = repo.head()
         .and_then(|h| h.peel_to_commit())
         .ok();
     
-    let parents: Vec<&git2::Commit> = head_commit.as_ref().into_iter().collect();
+    let parents: Vec<&git2::Commit> = _head_commit.as_ref().into_iter().collect();
     
     let commit_id = repo.commit(
         Some(&format!("refs/heads/{}", branch_name)),

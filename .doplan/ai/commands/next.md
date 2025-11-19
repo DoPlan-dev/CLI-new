@@ -1,3 +1,4 @@
+--- Cursor Command: next.md ---
 # Next
 
 ## Overview
@@ -24,3 +25,14 @@ Analyze the current project state and recommend the next best action. Check prog
 - Priority level
 - Estimated effort
 - Dependencies to consider
+
+## Usage
+Run `/next` in your IDE to get the next recommended action.
+
+## Execution
+This command is executed via:
+```bash
+doplan execute next
+```
+
+--- End Command ---

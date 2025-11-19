@@ -4,8 +4,16 @@ use crate::state::ProjectState;
 use crate::utils;
 
 pub fn generate(state: &ProjectState) -> Result<PathBuf> {
-    let project_root = utils::project_root()?;
+    // Validate state
+    if state.project_name.is_none() {
+        anyhow::bail!("Project state is incomplete: missing project_name. Run /discuss first.");
+    }
+
+    let project_root = utils::project_root()
+        .context("Failed to get project root directory")?;
     let context_path = project_root.join("CONTEXT.md");
+    utils::validate_write_path(&context_path)
+        .context("Invalid path for CONTEXT.md")?;
 
     let project_name = state.project_name.as_ref()
         .map(|s| s.as_str())
@@ -69,8 +77,16 @@ pub fn generate(state: &ProjectState) -> Result<PathBuf> {
     content.push_str("- [Design Template](./doplan/templates/design-template.md)\n");
     content.push_str("- [Tasks Template](./doplan/templates/tasks-template.md)\n\n");
 
-    std::fs::write(&context_path, content)
-        .context("Failed to write CONTEXT")?;
+    // Validate content before writing
+    utils::validate_content(&content, 100)
+        .context("Generated CONTEXT content is too short")?;
+
+    std::fs::write(&context_path, &content)
+        .with_context(|| format!("Failed to write CONTEXT to: {}", context_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&context_path, 100)
+        .context("CONTEXT file verification failed")?;
 
     Ok(context_path)
 }

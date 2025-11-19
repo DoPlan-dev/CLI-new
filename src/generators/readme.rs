@@ -4,8 +4,16 @@ use crate::state::ProjectState;
 use crate::utils;
 
 pub fn generate(state: &ProjectState) -> Result<PathBuf> {
-    let project_root = utils::project_root()?;
+    // Validate state
+    if state.project_name.is_none() {
+        anyhow::bail!("Project state is incomplete: missing project_name. Run /discuss first.");
+    }
+
+    let project_root = utils::project_root()
+        .context("Failed to get project root directory")?;
     let readme_path = project_root.join("README.md");
+    utils::validate_write_path(&readme_path)
+        .context("Invalid path for README.md")?;
 
     let project_name = state.project_name.as_ref()
         .map(|s| s.as_str())
@@ -109,8 +117,16 @@ pub fn generate(state: &ProjectState) -> Result<PathBuf> {
     content.push_str("## License\n\n");
     content.push_str("_License information_\n\n");
 
-    std::fs::write(&readme_path, content)
-        .context("Failed to write README")?;
+    // Validate content before writing
+    utils::validate_content(&content, 100)
+        .context("Generated README content is too short")?;
+
+    std::fs::write(&readme_path, &content)
+        .with_context(|| format!("Failed to write README to: {}", readme_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&readme_path, 100)
+        .context("README file verification failed")?;
 
     Ok(readme_path)
 }

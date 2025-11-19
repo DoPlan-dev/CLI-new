@@ -238,6 +238,123 @@ doplan execute implement <phase-id>/<feature-id>
     Ok(command_path)
 }
 
+/// Generate IDE command file for /next
+pub fn generate_next_command(ide_type: &str) -> Result<PathBuf> {
+    let commands_dir = utils::ai_commands_dir()?;
+    utils::ensure_dir(&commands_dir)?;
+
+    let filename = match ide_type {
+        "cursor" => "next.md",
+        "gemini" => "next.md",
+        "claude" => "next.md",
+        _ => "next.md",
+    };
+
+    let command_path = commands_dir.join(filename);
+
+    let content = r#"--- Cursor Command: next.md ---
+# Next
+
+## Overview
+Analyze the current project state and recommend the next best action. Check progress, incomplete tasks, and suggest what to work on next.
+
+## Workflow
+1. Read current state from `.doplan/state.json`
+2. Scan all feature directories for incomplete tasks
+3. Check progress.json files
+4. Consider dependencies between features
+5. Recommend highest priority action
+6. Display recommendation in dashboard format
+
+## Analysis Factors
+- Task completion status
+- Feature dependencies
+- Phase priorities
+- Blocked items
+- Progress percentages
+- GitHub branch status
+
+## Output
+- Next recommended action
+- Priority level
+- Estimated effort
+- Dependencies to consider
+
+## Usage
+Run `/next` in your IDE to get the next recommended action.
+
+## Execution
+This command is executed via:
+```bash
+doplan execute next
+```
+
+--- End Command ---
+"#;
+
+    std::fs::write(&command_path, content)
+        .context("Failed to write next command file")?;
+
+    Ok(command_path)
+}
+
+/// Generate IDE command file for /progress
+pub fn generate_progress_command(ide_type: &str) -> Result<PathBuf> {
+    let commands_dir = utils::ai_commands_dir()?;
+    utils::ensure_dir(&commands_dir)?;
+
+    let filename = match ide_type {
+        "cursor" => "progress.md",
+        "gemini" => "progress.md",
+        "claude" => "progress.md",
+        _ => "progress.md",
+    };
+
+    let command_path = commands_dir.join(filename);
+
+    let content = r#"--- Cursor Command: progress.md ---
+# Progress
+
+## Overview
+Update all progress tracking files. Recalculate progress bars for phases and features, update dashboard, and sync progress.json files.
+
+## Workflow
+1. Scan all feature directories in `doplan/`
+2. Read tasks.md files from each feature
+3. Count completed tasks (marked with [x])
+4. Calculate completion percentages
+5. Update progress.json files:
+   - Feature-level: `doplan/XX-phase/XX-feature/progress.json`
+   - Phase-level: `doplan/XX-phase/phase-progress.json`
+6. Regenerate dashboard:
+   - `.doplan/dashboard.json`
+   - `doplan/dashboard.md`
+7. Sync GitHub data (if enabled)
+8. Update state file: `.doplan/state.json`
+
+## Progress Calculation
+- Feature progress: (completed tasks / total tasks) * 100
+- Phase progress: Average of all feature progress in phase
+- Overall progress: Average of all phase progress
+
+## Usage
+Run `/progress` in your IDE to update all progress tracking.
+
+## Execution
+This command is executed via:
+```bash
+doplan execute progress
+```
+
+--- End Command ---
+"#;
+
+    std::fs::write(&command_path, content)
+        .context("Failed to write progress command file")?;
+
+    Ok(command_path)
+}
+
 /// Generate all IDE command files
 pub fn generate_all_commands(ide_types: &[String]) -> Result<Vec<PathBuf>> {
     let mut generated = Vec::new();
@@ -247,6 +364,8 @@ pub fn generate_all_commands(ide_types: &[String]) -> Result<Vec<PathBuf>> {
         generated.push(generate_generate_command(ide_type)?);
         generated.push(generate_plan_command(ide_type)?);
         generated.push(generate_implement_command(ide_type)?);
+        generated.push(generate_next_command(ide_type)?);
+        generated.push(generate_progress_command(ide_type)?);
     }
 
     Ok(generated)

@@ -5,8 +5,16 @@ use crate::state::ProjectState;
 use crate::utils;
 
 pub fn generate(state: &ProjectState) -> Result<PathBuf> {
-    let doplan_dir = utils::doplan_dir()?;
+    // Validate state
+    if state.project_name.is_none() {
+        anyhow::bail!("Project state is incomplete: missing project_name. Run /discuss first.");
+    }
+
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
     let rakd_path = doplan_dir.join("RAKD.md");
+    utils::validate_write_path(&rakd_path)
+        .context("Invalid path for RAKD.md")?;
 
     let project_root = utils::project_root()?;
     let mut required_keys = Vec::new();
@@ -87,8 +95,16 @@ pub fn generate(state: &ProjectState) -> Result<PathBuf> {
     content.push_str("- Rotate keys regularly\n");
     content.push_str("- Use different keys for development and production\n\n");
 
-    std::fs::write(&rakd_path, content)
-        .context("Failed to write RAKD")?;
+    // Validate content before writing
+    utils::validate_content(&content, 100)
+        .context("Generated RAKD content is too short")?;
+
+    std::fs::write(&rakd_path, &content)
+        .with_context(|| format!("Failed to write RAKD to: {}", rakd_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&rakd_path, 100)
+        .context("RAKD file verification failed")?;
 
     Ok(rakd_path)
 }

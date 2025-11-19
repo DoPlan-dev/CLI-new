@@ -4,11 +4,20 @@ use crate::state::ProjectState;
 use crate::utils;
 
 pub fn generate(state: &ProjectState, _idea_notes: &Option<String>) -> Result<PathBuf> {
-    let doplan_dir = utils::doplan_dir()?;
+    // Validate state
+    if state.project_name.is_none() {
+        anyhow::bail!("Project state is incomplete: missing project_name. Run /discuss first.");
+    }
+
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
     let contracts_dir = doplan_dir.join("contracts");
-    utils::ensure_dir(&contracts_dir)?;
+    utils::ensure_dir(&contracts_dir)
+        .context("Failed to create contracts directory")?;
 
     let data_model_path = contracts_dir.join("data-model.md");
+    utils::validate_write_path(&data_model_path)
+        .context("Invalid path for data-model.md")?;
 
     let project_name = state.project_name.as_ref()
         .map(|s| s.as_str())
@@ -133,8 +142,16 @@ pub fn generate(state: &ProjectState, _idea_notes: &Option<String>) -> Result<Pa
     content.push_str("}\n");
     content.push_str("```\n\n");
 
-    std::fs::write(&data_model_path, content)
-        .context("Failed to write data model document")?;
+    // Validate content before writing
+    utils::validate_content(&content, 200)
+        .context("Generated data model content is too short")?;
+
+    std::fs::write(&data_model_path, &content)
+        .with_context(|| format!("Failed to write data model document to: {}", data_model_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&data_model_path, 200)
+        .context("Data model file verification failed")?;
 
     Ok(data_model_path)
 }

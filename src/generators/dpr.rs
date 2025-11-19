@@ -7,10 +7,17 @@ use crate::utils;
 use serde_json::json;
 
 pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
-    let doplan_dir = utils::doplan_dir()?;
+    // Validate state
+    if state.project_name.is_none() {
+        anyhow::bail!("Project state is incomplete: missing project_name. Run /discuss first.");
+    }
+
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
     let plan_dir = doplan_dir.join("plan");
     let design_dir = doplan_dir.join("design");
-    utils::ensure_dir(&design_dir)?;
+    utils::ensure_dir(&design_dir)
+        .context("Failed to create design directory")?;
 
     let mut generated = Vec::new();
 
@@ -34,20 +41,34 @@ pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
 
     // Generate DPR.md
     let dpr_path = design_dir.join("DPR.md");
+    utils::validate_write_path(&dpr_path)
+        .context("Invalid path for DPR.md")?;
     generate_dpr_md(&dpr_path, state, &all_pages, &all_sections, &all_components, &all_cards)?;
+    utils::verify_file_write(&dpr_path, 100)
+        .context("DPR file verification failed")?;
     generated.push(dpr_path);
 
     // Generate design-tokens.json
     let tokens_path = design_dir.join("design-tokens.json");
+    utils::validate_write_path(&tokens_path)
+        .context("Invalid path for design-tokens.json")?;
     generate_design_tokens(&tokens_path)?;
+    utils::verify_file_write(&tokens_path, 100)
+        .context("Design tokens file verification failed")?;
     generated.push(tokens_path);
 
     // Generate design_rules.mdc
-    let dot_doplan = utils::dot_doplan_dir()?;
+    let dot_doplan = utils::dot_doplan_dir()
+        .context("Failed to get .doplan directory")?;
     let rules_dir = dot_doplan.join("ai").join("rules");
-    utils::ensure_dir(&rules_dir)?;
+    utils::ensure_dir(&rules_dir)
+        .context("Failed to create rules directory")?;
     let rules_path = rules_dir.join("design_rules.mdc");
+    utils::validate_write_path(&rules_path)
+        .context("Invalid path for design_rules.mdc")?;
     generate_design_rules(&rules_path, &all_pages, &all_sections, &all_components, &all_cards)?;
+    utils::verify_file_write(&rules_path, 100)
+        .context("Design rules file verification failed")?;
     generated.push(rules_path);
 
     Ok(generated)
@@ -226,8 +247,12 @@ fn generate_dpr_md(
     content.push_str("- Large: 24px\n");
     content.push_str("- XLarge: 32px\n\n");
 
-    std::fs::write(path, content)
-        .context("Failed to write DPR")?;
+    // Validate content before writing
+    utils::validate_content(&content, 100)
+        .context("Generated DPR content is too short")?;
+
+    std::fs::write(path, &content)
+        .with_context(|| format!("Failed to write DPR to: {}", path.display()))?;
 
     Ok(())
 }
@@ -291,10 +316,14 @@ fn generate_design_tokens(path: &PathBuf) -> Result<()> {
     });
 
     let content = serde_json::to_string_pretty(&tokens)
-        .context("Failed to serialize design tokens")?;
+        .context("Failed to serialize design tokens to JSON")?;
 
-    std::fs::write(path, content)
-        .context("Failed to write design tokens")?;
+    // Validate JSON content
+    utils::validate_content(&content, 50)
+        .context("Generated design tokens content is too short")?;
+
+    std::fs::write(path, &content)
+        .with_context(|| format!("Failed to write design tokens to: {}", path.display()))?;
 
     Ok(())
 }
@@ -351,8 +380,12 @@ fn generate_design_rules(
     content.push_str("4. Use responsive design patterns\n");
     content.push_str("5. Follow the established color system and typography\n\n");
 
-    std::fs::write(path, content)
-        .context("Failed to write design rules")?;
+    // Validate content before writing
+    utils::validate_content(&content, 50)
+        .context("Generated design rules content is too short")?;
+
+    std::fs::write(path, &content)
+        .with_context(|| format!("Failed to write design rules to: {}", path.display()))?;
 
     Ok(())
 }

@@ -4,10 +4,19 @@ use crate::state::ProjectState;
 use crate::utils;
 
 pub fn generate(state: &ProjectState, idea_notes: &Option<String>) -> Result<PathBuf> {
-    let doplan_dir = utils::doplan_dir()?;
-    utils::ensure_dir(&doplan_dir)?;
+    // Validate state
+    if state.project_name.is_none() && state.idea.is_none() {
+        anyhow::bail!("Project state is incomplete: missing both project_name and idea. Run /discuss first.");
+    }
+
+    let doplan_dir = utils::doplan_dir()
+        .context("Failed to get doplan directory")?;
+    utils::ensure_dir(&doplan_dir)
+        .context("Failed to create doplan directory")?;
 
     let prd_path = doplan_dir.join("PRD.md");
+    utils::validate_write_path(&prd_path)
+        .context("Invalid path for PRD.md")?;
 
     let project_name = state.project_name.as_ref()
         .map(|s| s.as_str())
@@ -149,8 +158,16 @@ pub fn generate(state: &ProjectState, idea_notes: &Option<String>) -> Result<Pat
     content.push_str("- Regular code reviews\n");
     content.push_str("- Performance monitoring\n\n");
 
-    std::fs::write(&prd_path, content)
-        .context("Failed to write PRD")?;
+    // Validate content before writing
+    utils::validate_content(&content, 100)
+        .context("Generated PRD content is too short")?;
+
+    std::fs::write(&prd_path, &content)
+        .with_context(|| format!("Failed to write PRD to: {}", prd_path.display()))?;
+
+    // Verify file was written successfully
+    utils::verify_file_write(&prd_path, 100)
+        .context("PRD file verification failed")?;
 
     Ok(prd_path)
 }
