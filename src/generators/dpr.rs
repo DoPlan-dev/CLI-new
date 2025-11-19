@@ -13,8 +13,35 @@ pub fn generate(state: &ProjectState) -> Result<Vec<PathBuf>> {
     }
 
     // Get current working directory first - this can fail in some environments
+    // This can happen if the current directory was deleted or is inaccessible
     let current_dir = std::env::current_dir()
-        .context("Failed to get current working directory. Ensure you're in a valid project directory")?;
+        .with_context(|| {
+            // Try to get more diagnostic information
+            let cwd_env = std::env::var("PWD").ok();
+            format!(
+                "Failed to get current working directory (os error 2: No such file or directory). \
+                This usually means the current directory was deleted or is inaccessible. \
+                PWD env var: {:?}. \
+                Ensure you're in a valid project directory that exists.",
+                cwd_env
+            )
+        })?;
+    
+    // Verify the current directory actually exists and is accessible
+    if !current_dir.exists() {
+        anyhow::bail!(
+            "Current working directory does not exist: {}. \
+            This can happen if the directory was deleted while the process was running in it.",
+            current_dir.display()
+        );
+    }
+    
+    if !current_dir.is_dir() {
+        anyhow::bail!(
+            "Current working directory path exists but is not a directory: {}",
+            current_dir.display()
+        );
+    }
     
     let doplan_dir = utils::doplan_dir()
         .with_context(|| format!("Failed to get doplan directory from current directory: {}", current_dir.display()))?;

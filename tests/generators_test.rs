@@ -276,6 +276,25 @@ fn test_dpr_generation() -> Result<()> {
     }
     eprintln!("Plan file exists: {}", fs::metadata(&plan_path).is_ok());
     
+    // Verify current directory still exists before calling generator
+    // This is a defensive check to catch issues early
+    let current_dir_check = std::env::current_dir();
+    if let Err(e) = &current_dir_check {
+        eprintln!("ERROR: Current directory is invalid before DPR generation: {}", e);
+        eprintln!("This suggests the temp directory was deleted or is inaccessible");
+        panic!("Current directory check failed: {}", e);
+    }
+    let verified_cwd = current_dir_check?;
+    eprintln!("Verified current directory exists: {:?}", verified_cwd);
+    
+    // Verify the doplan directory exists
+    let doplan_dir = verified_cwd.join("doplan");
+    if !doplan_dir.exists() {
+        eprintln!("ERROR: doplan directory does not exist at: {:?}", doplan_dir);
+        panic!("doplan directory missing before DPR generation");
+    }
+    eprintln!("Verified doplan directory exists: {:?}", doplan_dir);
+    
     let result = generators::dpr::generate(&env.state);
     
     if let Err(ref e) = result {
