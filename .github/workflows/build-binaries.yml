@@ -162,7 +162,19 @@ jobs:
           PKG_CONFIG_ALLOW_CROSS: ${{ env.PKG_CONFIG_ALLOW_CROSS }}
           DYLD_LIBRARY_PATH: ${{ env.DYLD_LIBRARY_PATH }}
         run: |
+          echo "Building for target: ${{ matrix.target }}"
+          echo "Runner OS: ${{ runner.os }}"
           cargo build --release --target ${{ matrix.target }} --verbose
+          
+      - name: Debug build output (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          echo "Checking for binary at target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+          ls -la target/${{ matrix.target }}/release/ 2>/dev/null || echo "Target directory does not exist"
+          echo "Checking for binary at target/release/${{ matrix.binary_name }}"
+          ls -la target/release/ 2>/dev/null || echo "Default release directory does not exist"
+          echo "All target directories:"
+          find target -name "${{ matrix.binary_name }}" -type f 2>/dev/null || echo "No binary found"
 
       - name: Build release binary (cross-compile)
         if: matrix.os == 'ubuntu-latest' && matrix.arch == 'arm64'
@@ -176,19 +188,60 @@ jobs:
           
       - name: Verify binary exists
         run: |
-          BINARY_PATH="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
-          if [ ! -f "$BINARY_PATH" ]; then
-            echo "Error: Binary not found at $BINARY_PATH"
+          # Try target-specific path first
+          TARGET_PATH="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+          # Fallback to default release path (for native builds)
+          DEFAULT_PATH="target/release/${{ matrix.binary_name }}"
+          
+          BINARY_PATH=""
+          if [ -f "$TARGET_PATH" ]; then
+            BINARY_PATH="$TARGET_PATH"
+            echo "✓ Binary found at target-specific path: $BINARY_PATH"
+          elif [ -f "$DEFAULT_PATH" ]; then
+            BINARY_PATH="$DEFAULT_PATH"
+            echo "✓ Binary found at default path: $BINARY_PATH"
+            echo "Note: Using default release path instead of target-specific path"
+          else
+            echo "Error: Binary not found at either location:"
+            echo "  - $TARGET_PATH"
+            echo "  - $DEFAULT_PATH"
+            echo ""
+            echo "Searching for binary..."
+            find target -name "${{ matrix.binary_name }}" -type f 2>/dev/null || echo "No binary found in target directory"
+            echo ""
+            echo "Build target: ${{ matrix.target }}"
+            echo "Expected binary name: ${{ matrix.binary_name }}"
             exit 1
           fi
+          
           ls -lh "$BINARY_PATH"
-          echo "✓ Binary built successfully"
+          echo "✓ Binary verified: $BINARY_PATH"
+          # Export for use in subsequent steps
+          echo "BINARY_PATH=${BINARY_PATH}" >> $GITHUB_ENV
 
       - name: Generate checksum
         id: checksum
         shell: bash
         run: |
-          BINARY_PATH="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+          # Use the verified binary path from previous step, or fallback to target path
+          if [ -n "$BINARY_PATH" ] && [ -f "$BINARY_PATH" ]; then
+            BINARY_PATH="$BINARY_PATH"
+          else
+            # Fallback to target-specific path
+            TARGET_PATH="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+            if [ -f "$TARGET_PATH" ]; then
+              BINARY_PATH="$TARGET_PATH"
+            else
+              # Fallback to default path
+              DEFAULT_PATH="target/release/${{ matrix.binary_name }}"
+              if [ -f "$DEFAULT_PATH" ]; then
+                BINARY_PATH="$DEFAULT_PATH"
+              else
+                echo "Error: Binary path not found for checksum generation"
+                exit 1
+              fi
+            fi
+          fi
           ARTIFACT_NAME="${{ matrix.artifact_name }}"
           
           if [ "${{ runner.os }}" = "Windows" ]; then
@@ -211,13 +264,28 @@ jobs:
           echo "Checksum: ${CHECKSUM}"
           cat "checksums-${ARTIFACT_NAME}.txt"
 
+      - name: Prepare artifact directory
+        run: |
+          # Create a staging directory for artifacts
+          mkdir -p artifact_staging
+          # Copy the verified binary to a predictable location
+          if [ -n "$BINARY_PATH" ] && [ -f "$BINARY_PATH" ]; then
+            cp "$BINARY_PATH" "artifact_staging/${{ matrix.binary_name }}"
+            echo "Copied binary from $BINARY_PATH to artifact_staging/${{ matrix.binary_name }}"
+          else
+            echo "Error: BINARY_PATH not set or file not found"
+            exit 1
+          fi
+          # Copy checksum files
+          cp checksums-*.txt artifact_staging/ 2>/dev/null || true
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: |
-            target/${{ matrix.target }}/release/${{ matrix.binary_name }}
-            checksums-*.txt
+            artifact_staging/${{ matrix.binary_name }}
+            artifact_staging/checksums-*.txt
           retention-days: 30
 
       - name: Upload checksum artifact
