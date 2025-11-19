@@ -55,7 +55,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          tags: true
+          fetch-tags: true
 
       - name: Install OpenSSL (macOS)
         if: matrix.os == 'macos-latest'
@@ -119,8 +119,9 @@ jobs:
           fi
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@v1
         with:
+          toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: Install cross (for Linux ARM64 cross-compilation)
@@ -131,6 +132,7 @@ jobs:
 
       - name: Get version
         id: version
+        shell: bash
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
             VERSION="${{ github.event.inputs.version }}"
@@ -163,6 +165,7 @@ jobs:
           
       - name: Debug build output (macOS)
         if: matrix.os == 'macos-latest'
+        shell: bash
         run: |
           echo "Checking for binary at target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
           ls -la target/${{ matrix.target }}/release/ 2>/dev/null || echo "Target directory does not exist"
@@ -182,6 +185,7 @@ jobs:
           cross build --release --target ${{ matrix.target }} --verbose
           
       - name: Verify binary exists
+        shell: bash
         run: |
           # Try target-specific path first
           TARGET_PATH="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
@@ -260,6 +264,7 @@ jobs:
           cat "checksums-${ARTIFACT_NAME}.txt"
 
       - name: Prepare artifact directory
+        shell: bash
         run: |
           # Create a staging directory for artifacts
           mkdir -p artifact_staging
@@ -296,10 +301,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          tags: true
+          fetch-tags: true
 
       - name: Get version
         id: version
+        shell: bash
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             VERSION=${GITHUB_REF#refs/tags/v}
@@ -328,6 +334,7 @@ jobs:
           node-version: '18'
 
       - name: Generate combined checksums file
+        shell: bash
         run: |
           echo "# SHA256 Checksums for DoPlan CLI v${{ steps.version.outputs.version }}" > checksums.txt
           echo "" >> checksums.txt
