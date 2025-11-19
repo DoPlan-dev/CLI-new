@@ -1,0 +1,231 @@
+name: Build Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., 1.0.0)'
+        required: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }} (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            binary_name: doplan
+            artifact_name: doplan-x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+            binary_name: doplan
+            artifact_name: doplan-aarch64-unknown-linux-gnu
+          - os: macos-latest
+            arch: x86_64
+            target: x86_64-apple-darwin
+            binary_name: doplan
+            artifact_name: doplan-x86_64-apple-darwin
+          - os: macos-latest
+            arch: arm64
+            target: aarch64-apple-darwin
+            binary_name: doplan
+            artifact_name: doplan-aarch64-apple-darwin
+          - os: windows-latest
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
+            binary_name: doplan.exe
+            artifact_name: doplan-x86_64-pc-windows-msvc.exe
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          tags: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            # Extract version from git tag (e.g., v1.0.0 -> 1.0.0)
+            TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
+            if [ -z "$TAG" ]; then
+              # Try to get version from package.json
+              VERSION=$(node -p "require('./package.json').version")
+            else
+              VERSION=${TAG#v}
+            fi
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
+
+      - name: Build release binary
+        run: |
+          cargo build --release --target ${{ matrix.target }} --verbose
+          
+      - name: Verify binary exists
+        run: |
+          BINARY_PATH="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+          if [ ! -f "$BINARY_PATH" ]; then
+            echo "Error: Binary not found at $BINARY_PATH"
+            exit 1
+          fi
+          ls -lh "$BINARY_PATH"
+          echo "✓ Binary built successfully"
+
+      - name: Generate checksum
+        id: checksum
+        shell: bash
+        run: |
+          BINARY_PATH="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+          ARTIFACT_NAME="${{ matrix.artifact_name }}"
+          
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            # Windows: use certutil or PowerShell
+            CHECKSUM=$(powershell -Command "(Get-FileHash -Path '$BINARY_PATH' -Algorithm SHA256).Hash" | tr -d ' \r\n')
+          else
+            # Unix-like: use shasum or sha256sum
+            if command -v shasum > /dev/null 2>&1; then
+              CHECKSUM=$(shasum -a 256 "$BINARY_PATH" | cut -d' ' -f1)
+            elif command -v sha256sum > /dev/null 2>&1; then
+              CHECKSUM=$(sha256sum "$BINARY_PATH" | cut -d' ' -f1)
+            else
+              echo "Error: No checksum tool found"
+              exit 1
+            fi
+          fi
+          
+          echo "checksum=${CHECKSUM}" >> $GITHUB_OUTPUT
+          echo "${CHECKSUM}  ${ARTIFACT_NAME}" > "checksums-${ARTIFACT_NAME}.txt"
+          echo "Checksum: ${CHECKSUM}"
+          cat "checksums-${ARTIFACT_NAME}.txt"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+            checksums-*.txt
+          retention-days: 30
+
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: checksums-*.txt
+          retention-days: 30
+
+  create-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          tags: true
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
+            if [ -z "$TAG" ]; then
+              VERSION=$(node -p "require('./package.json').version")
+            else
+              VERSION=${TAG#v}
+            fi
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Generate combined checksums file
+        run: |
+          echo "# SHA256 Checksums for DoPlan CLI v${{ steps.version.outputs.version }}" > checksums.txt
+          echo "" >> checksums.txt
+          find artifacts -name "checksums-*.txt" -exec cat {} \; >> checksums.txt
+          echo "" >> checksums.txt
+          echo "Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> checksums.txt
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          body: |
+            ## DoPlan CLI ${{ steps.version.outputs.version }}
+            
+            ### Binaries
+            
+            Download the binary for your platform:
+            
+            - **macOS (Intel)**: `doplan-x86_64-apple-darwin`
+            - **macOS (Apple Silicon)**: `doplan-aarch64-apple-darwin`
+            - **Linux (x86_64)**: `doplan-x86_64-unknown-linux-gnu`
+            - **Linux (ARM64)**: `doplan-aarch64-unknown-linux-gnu`
+            - **Windows (x64)**: `doplan-x86_64-pc-windows-msvc.exe`
+            
+            ### Verification
+            
+            Verify your download using the checksums file:
+            ```bash
+            shasum -a 256 -c checksums.txt
+            ```
+            
+            ### Installation
+            
+            ```bash
+            npm install -g @doplan-dev/cli
+            ```
+            
+            See [README](https://github.com/${{ github.repository }}/blob/master/README.md) for more information.
+          files: |
+            artifacts/**/doplan-*
+            artifacts/**/doplan-*.exe
+            checksums.txt
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

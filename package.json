@@ -9,7 +9,12 @@
     "postinstall": "node scripts/postinstall.js",
     "build": "node scripts/build.js",
     "prepublishOnly": "npm run build && node scripts/prepublish.js",
-    "test": "cargo test"
+    "test": "cargo test",
+    "version:sync": "node scripts/version-sync.js",
+    "version:check": "node scripts/version-sync.js",
+    "release": "node scripts/release.js",
+    "changelog": "node scripts/generate-changelog.js",
+    "checksum": "node scripts/generate-checksum.js"
   },
   "files": [
     "bin/",

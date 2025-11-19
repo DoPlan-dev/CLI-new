@@ -1,0 +1,77 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          tags: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify versions are synchronized
+        run: |
+          node scripts/version-sync.js
+          echo "✓ All versions synchronized"
+
+      - name: Run tests
+        run: cargo test --verbose
+
+      - name: Build release binary
+        run: cargo build --release --verbose
+
+      - name: Verify binary exists
+        run: |
+          if [ ! -f target/release/doplan ]; then
+            echo "Error: Binary not found after build"
+            exit 1
+          fi
+          echo "✓ Binary built successfully"
+
+      - name: Run pre-publish validation
+        run: |
+          node scripts/prepublish.js
+          echo "✓ Pre-publish validation passed"
+
+      - name: Package npm bundle
+        run: |
+          npm pack --dry-run
+          echo "✓ Package contents verified"
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+
+      - name: Verify published package
+        run: |
+          PACKAGE_NAME="@doplan-dev/cli"
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Verifying package: ${PACKAGE_NAME}@${VERSION}"
+          npm view "${PACKAGE_NAME}@${VERSION}" version
+          echo "✓ Package published successfully"
+

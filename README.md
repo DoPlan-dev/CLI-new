@@ -2,6 +2,9 @@
 
 A comprehensive CLI tool that automates project workflow from idea to deployment
 
+[![npm version](https://img.shields.io/npm/v/@doplan-dev/cli.svg)](https://www.npmjs.com/package/@doplan-dev/cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ---
 
 ## Features
@@ -14,35 +17,80 @@ A comprehensive CLI tool that automates project workflow from idea to deployment
 
 ## Technology Stack
 
-- Frontend: React/Next.js
-- Backend: Rust/Axum
-- Database: PostgreSQL
-- Deployment: Docker
+- **CLI Framework**: Rust (clap, tokio)
+- **Language**: Rust
+- **Distribution**: npm (Node.js wrapper)
+- **Build**: Cargo
 
 ## Getting Started
 
 ### Prerequisites
 
-_List prerequisites_
+- **Node.js** >= 14.0.0 (for npm package installation)
+- **Rust & Cargo** (optional, only if building from source)
 
 ### Installation
 
+#### Install from npm (Recommended)
+
 ```bash
-# Installation steps
+# Global installation
+npm install -g @doplan-dev/cli
+
+# Or as a project dependency
+npm install @doplan-dev/cli
 ```
+
+After installation, verify it works:
+
+```bash
+doplan --version
+```
+
+#### Install from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/DoPlan-dev/CLI-new.git
+cd CLI-new
+
+# Build the release binary
+cargo build --release
+
+# Install globally
+cargo install --path .
+
+# Or run directly
+./target/release/doplan --version
+```
+
+### Quick Start
+
+1. **Initialize DoPlan in your project:**
+   ```bash
+   doplan install
+   ```
+
+2. **Use IDE integration commands:**
+   - `/discuss` - Refine app idea, get tech stack recommendations
+   - `/generate` - Generate project documents
+   - `/plan` - Create phase and feature structure
+   - `/implement` - Start feature implementation
+   - `/next` - Get next recommended action
+   - `/progress` - Update progress tracking
+   - `/phase` - Manage phases
+   - `/feature` - Manage features
+
+3. **View project dashboard:**
+   ```bash
+   doplan dashboard
+   ```
 
 ### Configuration
 
-1. Copy `.env.example` to `.env`
-2. Configure environment variables
-3. See [RAKD](./doplan/RAKD.md) for required API keys
+DoPlan stores configuration in `.doplan/state.json` and project files in `doplan/` directory.
 
-### Running the Project
-
-```bash
-# Development
-# Production
-```
+For API keys and external services, see [RAKD](./doplan/RAKD.md).
 
 ## Project Structure
 
@@ -92,11 +140,104 @@ Add enhancements and polish
 **Features:**
 - Dashboard
 
+## Platform Support
+
+DoPlan CLI supports the following platforms:
+
+- **macOS**: Intel (x86_64) and Apple Silicon (arm64)
+- **Linux**: x86_64 and ARM64
+- **Windows**: x86_64
+
+Binaries are automatically downloaded for your platform when installing from npm.
+
+## Troubleshooting
+
+### Binary not found
+
+If you see "Binary not found" errors:
+
+1. **For npm installations**: The binary should download automatically. If it doesn't:
+   ```bash
+   npm uninstall -g @doplan-dev/cli
+   npm install -g @doplan-dev/cli
+   ```
+
+2. **For source installations**: Make sure you built the release binary:
+   ```bash
+   cargo build --release
+   ```
+
+### Version mismatch
+
+If you encounter version synchronization issues:
+
+```bash
+# Check version sync across all files
+node scripts/version-sync.js
+
+# Or sync to a specific version
+node scripts/version-sync.js 1.0.0
+```
+
+### Rust/Cargo not found
+
+If you're building from source and get Rust errors:
+
+1. Install Rust: https://rustup.rs/
+2. Verify installation: `cargo --version`
+
 ## Contributing
 
-_Contributing guidelines_
+Contributions are welcome! Please see our contributing guidelines (coming soon).
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests: `cargo test`
+5. Submit a pull request
 
 ## License
 
-_License information_
+MIT License - see [LICENSE](./LICENSE) file for details
+
+## Links
+
+- **npm Package**: https://www.npmjs.com/package/@doplan-dev/cli
+- **Repository**: https://github.com/DoPlan-dev/CLI-new
+- **Issues**: https://github.com/DoPlan-dev/CLI-new/issues
+- **Releases**: https://github.com/DoPlan-dev/CLI-new/releases
+
+## Development
+
+### Building from Source
+
+```bash
+# Clone repository
+git clone https://github.com/DoPlan-dev/CLI-new.git
+cd CLI-new
+
+# Build release binary
+cargo build --release
+
+# Run tests
+cargo test
+
+# Generate checksum
+npm run checksum target/release/doplan
+```
+
+### Release Process
+
+See [NPM_PUBLISH.md](./NPM_PUBLISH.md) for detailed release instructions.
+
+Quick release:
+```bash
+npm run release 1.0.1
+git push origin master --tags
+# Create GitHub Release via UI or CLI
+```
+
+### Configuration
+
+For GitHub secrets setup, see [docs/GITHUB_SECRETS.md](./docs/GITHUB_SECRETS.md).
 
