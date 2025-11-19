@@ -295,6 +295,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout code
@@ -333,6 +335,18 @@ jobs:
         with:
           node-version: '18'
 
+      - name: List downloaded artifacts
+        shell: bash
+        run: |
+          echo "Artifact directory structure:"
+          find artifacts -type f -name "*" | head -20 || true
+          echo ""
+          echo "Looking for binaries:"
+          find artifacts -name "doplan" -o -name "doplan.exe" | head -10 || true
+          echo ""
+          echo "Looking for checksums:"
+          find artifacts -name "checksums-*.txt" | head -10 || true
+
       - name: Generate combined checksums file
         shell: bash
         run: |
@@ -342,6 +356,31 @@ jobs:
           echo "" >> checksums.txt
           echo "Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> checksums.txt
           cat checksums.txt
+
+      - name: Prepare release files
+        shell: bash
+        run: |
+          # Create a release_files directory with properly named binaries
+          mkdir -p release_files
+          
+          # Copy binaries with their artifact names
+          for artifact_dir in artifacts/*/; do
+            if [ -d "$artifact_dir" ]; then
+              artifact_name=$(basename "$artifact_dir")
+              # Find the binary in this artifact directory
+              if [ -f "$artifact_dir/doplan" ]; then
+                cp "$artifact_dir/doplan" "release_files/$artifact_name"
+                echo "Copied: $artifact_dir/doplan -> release_files/$artifact_name"
+              elif [ -f "$artifact_dir/doplan.exe" ]; then
+                cp "$artifact_dir/doplan.exe" "release_files/$artifact_name.exe"
+                echo "Copied: $artifact_dir/doplan.exe -> release_files/$artifact_name.exe"
+              fi
+            fi
+          done
+          
+          # List what we have
+          echo "Release files prepared:"
+          ls -lh release_files/ || echo "No files in release_files/"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -376,11 +415,11 @@ jobs:
             
             See [README](https://github.com/${{ github.repository }}/blob/master/README.md) for more information.
           files: |
-            artifacts/**/doplan-*
-            artifacts/**/doplan-*.exe
+            release_files/*
             checksums.txt
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          make_latest: ${{ !contains(steps.version.outputs.version, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
