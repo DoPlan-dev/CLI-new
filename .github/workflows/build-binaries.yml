@@ -297,7 +297,6 @@ jobs:
     if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
-      metadata: write
     
     steps:
       - name: Checkout code
