@@ -7,7 +7,7 @@ use doplan::commands::{discuss, generate, plan, implement, next, progress, phase
 #[derive(Parser)]
 #[command(name = "doplan")]
 #[command(about = "Project workflow automation tool", long_about = None)]
-#[command(version = "1.0.6-beta")]
+#[command(version = "1.0.8-beta")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,

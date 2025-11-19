@@ -386,7 +386,7 @@ dependencies = [
 
 [[package]]
 name = "doplan"
-version = "1.0.5-beta"
+version = "1.0.8-beta"
 dependencies = [
  "anyhow",
  "assert_cmd",
