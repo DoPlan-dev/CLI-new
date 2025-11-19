@@ -1,0 +1,39 @@
+# Rust build artifacts
+target/
+Cargo.lock
+*.rs.bk
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (keep README and LICENSE)
+docs/
+*.md
+!README.md
+!RELEASE_NOTES.md
+
+# Test files
+tests/
+*.test.js
+
+# Development files
+.env
+.env.local
+
+# Project-specific
+doplan/
+.doplan/
+.cursor/
+
