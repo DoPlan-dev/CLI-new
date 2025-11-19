@@ -1,6 +1,6 @@
 {
   "name": "@doplan-dev/cli",
-  "version": "1.0.0",
+  "version": "1.0.2-beta",
   "description": "Project workflow automation tool that transforms app ideas into well-structured, documented, and trackable development projects",
   "bin": {
     "doplan": "./bin/doplan.js"
@@ -58,4 +58,3 @@
     "registry": "https://registry.npmjs.org/"
   }
 }
-
