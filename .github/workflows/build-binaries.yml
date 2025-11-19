@@ -287,13 +287,8 @@ jobs:
             artifact_staging/${{ matrix.binary_name }}
             artifact_staging/checksums-*.txt
           retention-days: 30
-
-      - name: Upload checksum artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: checksums
-          path: checksums-*.txt
-          retention-days: 30
+          # Note: Checksums are included in the binary artifact above
+          # The create-release job finds them using: find artifacts -name "checksums-*.txt"
 
   create-release:
     name: Create GitHub Release
